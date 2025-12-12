@@ -198,7 +198,7 @@
 
             <!-- Main Table Area -->
             <main class="flex-1 overflow-auto bg-white relative" id="capture-area">
-                <div class="min-w-full inline-block align-top pb-[50vh]">
+                <div class="min-w-full inline-block align-top pb-[300px]">
                     <div class="grid border-b border-gray-200"
                         :style="{ gridTemplateColumns: `repeat(${activeMemo.colCount}, minmax(80px, 1fr))` }">
 
@@ -238,7 +238,7 @@
                 enter-to-class="translate-y-0" leave-active-class="transition ease-in duration-150"
                 leave-from-class="translate-y-0" leave-to-class="translate-y-full">
                 <div v-if="ui.showInputPanel" id="input-panel"
-                    class="fixed bottom-0 left-0 w-full bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-[1000] flex flex-col safe-area-bottom">
+                    class="fixed bottom-0 left-0 w-full bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-[9999] flex flex-col safe-area-bottom border-t border-gray-200">
 
                     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                         <button @click="closePanel" class="text-gray-400 px-2 py-1 text-sm">キャンセル</button>
@@ -253,7 +253,7 @@
                             </button>
                         </div>
 
-                        <button @mousedown.prevent="commitAndNext"
+                        <button @touchstart.prevent="commitAndNext" @mousedown.prevent="commitAndNext"
                             class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md active:bg-blue-700">
                             次へ <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
                         </button>
