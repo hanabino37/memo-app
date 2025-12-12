@@ -20,35 +20,48 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Custom Utilities */
-        html {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-        }
-
+        /* Phase 10: App Shell Architecture */
+        html,
         body {
-            position: fixed;
-            /* iOS Body Lock */
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            /* Disable global scroll */
+            overscroll-behavior: none;
+            /* Disable bounce */
+        }
+
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            /* Dynamic Viewport Height */
+            width: 100%;
             background-color: #f3f4f6;
         }
 
-        #app {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             width: 100%;
-            overflow: hidden;
+            position: relative;
+            z-index: 1;
         }
 
-        .safe-area-bottom {
+        .input-panel-area {
+            flex: none;
+            width: 100%;
+            background-color: white;
+            z-index: 999;
+            border-top: 1px solid #e5e7eb;
             padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .scroll-spacer {
+            height: 300px;
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -68,7 +81,7 @@
 
 <body>
 
-    <div id="app" class="h-full flex flex-col relative" v-cloak>
+    <div id="app" class="app-shell" v-cloak>
 
         <!-- ==================== HOME SCREEN ==================== -->
         <template v-if="viewState === 'home'">
@@ -217,10 +230,8 @@
             <div v-if="ui.showMenu" class="fixed inset-0 z-10" @click="ui.showMenu = false"></div>
 
             <!-- Main Table Area -->
-            <main
-                class="flex-1 overflow-y-auto overscroll-y-contain -webkit-overflow-scrolling-touch bg-white relative w-full pb-[50px]"
-                id="capture-area">
-                <div class="min-w-full inline-block align-top">
+            <main class="content-area" id="capture-area">
+                <div class="min-w-full inline-block align-top p-4">
                     <div class="grid border-b border-gray-200"
                         :style="{ gridTemplateColumns: `repeat(${activeMemo.colCount}, minmax(80px, 1fr))` }">
 
@@ -253,6 +264,7 @@
                         </template>
                     </div>
                 </div>
+                <div class="scroll-spacer"></div>
             </main>
 
             <!-- Statistics Modal (Color Only) -->
@@ -392,39 +404,33 @@
             </div>
         </div>
 
-        <!-- Input Panel (Flex Item for Phase 8) -->
-        <transition enter-active-class="transition ease-out duration-200" enter-from-class="translate-y-full"
-            enter-to-class="translate-y-0" leave-active-class="transition ease-in duration-150"
-            leave-from-class="translate-y-0" leave-to-class="translate-y-full">
-            <div v-if="ui.showInputPanel" id="input-panel"
-                class="flex-none z-50 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex flex-col safe-area-bottom border-t border-gray-200">
+        <!-- Input Panel (Footer) -->
+        <footer class="input-panel-area" v-if="ui.showInputPanel">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <button @click="closePanel" class="text-gray-400 px-2 py-1 text-sm">キャンセル</button>
 
-                <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                    <button @click="closePanel" class="text-gray-400 px-2 py-1 text-sm">キャンセル</button>
-
-                    <div class="flex gap-2">
-                        <button v-for="color in colors" :key="color.key"
-                            class="w-8 h-8 rounded-full border border-gray-200 shadow-sm transform transition active:scale-95 flex items-center justify-center"
-                            :class="[color.bgClass, ui.editColor === color.key ? 'ring-2 ring-offset-2 ring-gray-400' : '']"
-                            @click="ui.editColor = color.key">
-                            <i v-if="ui.editColor === color.key" class="fa-solid fa-check text-xs"
-                                :class="color.key === 'white' ? 'text-gray-600' : 'text-white/80'"></i>
-                        </button>
-                    </div>
-
-                    <button @touchstart.prevent="commitAndNext" @mousedown.prevent="commitAndNext"
-                        class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md active:bg-blue-700">
-                        次へ <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
+                <div class="flex gap-2">
+                    <button v-for="color in colors" :key="color.key"
+                        class="w-8 h-8 rounded-full border border-gray-200 shadow-sm transform transition active:scale-95 flex items-center justify-center"
+                        :class="[color.bgClass, ui.editColor === color.key ? 'ring-2 ring-offset-2 ring-gray-400' : '']"
+                        @click="ui.editColor = color.key">
+                        <i v-if="ui.editColor === color.key" class="fa-solid fa-check text-xs"
+                            :class="color.key === 'white' ? 'text-gray-600' : 'text-white/80'"></i>
                     </button>
                 </div>
 
-                <div class="p-4 bg-gray-50">
-                    <input ref="mainInput" type="text" maxlength="8" v-model="ui.editValue" @keyup.enter="commitAndNext"
-                        placeholder="入力..."
-                        class="w-full text-xl font-bold bg-white border border-gray-300 rounded-lg px-4 py-3 text-center focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all shadow-inner">
-                </div>
+                <button @touchstart.prevent="commitAndNext" @mousedown.prevent="commitAndNext"
+                    class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md active:bg-blue-700">
+                    次へ <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
+                </button>
             </div>
-        </transition>
+
+            <div class="p-4 bg-gray-50">
+                <input ref="mainInput" type="text" maxlength="8" v-model="ui.editValue" @keyup.enter="commitAndNext"
+                    placeholder="入力..."
+                    class="w-full text-xl font-bold bg-white border border-gray-300 rounded-lg px-4 py-3 text-center focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all shadow-inner">
+            </div>
+        </footer>
 
     </div>
 
@@ -698,7 +704,7 @@
                             // 2. Standard Scroll (Meta tag handles viewport resize)
                             const el = document.getElementById(`cell-${r}-${c}`);
                             if (el && mainInput.value) {
-                                // Wait slightly for resize to happen
+                                // Phase 10: Use nearest to just ensure visibility within the reduced viewport
                                 setTimeout(() => {
                                     el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                                 }, 100);
