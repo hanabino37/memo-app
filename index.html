@@ -237,7 +237,7 @@
             <transition enter-active-class="transition ease-out duration-200" enter-from-class="translate-y-full"
                 enter-to-class="translate-y-0" leave-active-class="transition ease-in duration-150"
                 leave-from-class="translate-y-0" leave-to-class="translate-y-full">
-                <div v-if="ui.showInputPanel"
+                <div v-if="ui.showInputPanel" id="input-panel"
                     class="fixed bottom-0 left-0 w-full bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-[1000] flex flex-col safe-area-bottom">
 
                     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
@@ -676,13 +676,28 @@
                         }
 
                         // 2. Scroll to position (Snap above input panel)
-                        const el = document.getElementById(`cell-${r}-${c}`);
-                        if (el) {
-                            setTimeout(() => {
-                                el.style.scrollMarginBottom = '80px'; // Approx input panel height
-                                el.scrollIntoView({ block: 'end', behavior: 'smooth' });
-                            }, 400); // 400ms delay for keyboard
-                        }
+                        // 2. Snap Scroll (Manual Calculation for iOS)
+                        setTimeout(() => {
+                            const cell = document.getElementById(`cell-${r}-${c}`);
+                            const panel = document.getElementById('input-panel');
+
+                            if (cell && panel) {
+                                const panelHeight = panel.offsetHeight;
+                                const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+                                // Calculate absolute bottom of the cell
+                                const rect = cell.getBoundingClientRect();
+                                const absoluteBottom = window.scrollY + rect.bottom;
+
+                                // Target: Scroll so that cell bottom touches (Viewport Bottom - Panel Height)
+                                const targetScrollY = absoluteBottom - viewportHeight + panelHeight;
+
+                                window.scrollTo({
+                                    top: targetScrollY,
+                                    behavior: 'smooth'
+                                });
+                            }
+                        }, 500); // Wait for keyboard animation completely
                     });
                 };
 
