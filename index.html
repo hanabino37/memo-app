@@ -238,7 +238,7 @@
                 enter-to-class="translate-y-0" leave-active-class="transition ease-in duration-150"
                 leave-from-class="translate-y-0" leave-to-class="translate-y-full">
                 <div v-if="ui.showInputPanel"
-                    class="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] rounded-t-2xl z-40 flex flex-col safe-area-bottom">
+                    class="fixed bottom-0 left-0 w-full bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-[1000] flex flex-col safe-area-bottom">
 
                     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                         <button @click="closePanel" class="text-gray-400 px-2 py-1 text-sm">キャンセル</button>
@@ -676,7 +676,7 @@
                         if (el) {
                             setTimeout(() => {
                                 el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                            }, 300); // Slight delay for keyboard animation
+                            }, 400); // Slight delay for keyboard animation
                         }
                     });
                 };
