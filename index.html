@@ -198,7 +198,7 @@
 
             <!-- Main Table Area -->
             <main class="flex-1 overflow-auto bg-white relative" id="capture-area">
-                <div class="min-w-full inline-block align-top pb-32">
+                <div class="min-w-full inline-block align-top pb-[50vh]">
                     <div class="grid border-b border-gray-200"
                         :style="{ gridTemplateColumns: `repeat(${activeMemo.colCount}, minmax(80px, 1fr))` }">
 
@@ -670,13 +670,18 @@
                     ui.showMenu = false;
 
                     nextTick(() => {
-                        if (mainInput.value) mainInput.value.focus();
-                        // Scroll to center (UX fix for mobile keyboard)
+                        if (mainInput.value) {
+                            // 1. Focus without scrolling to prevent jumping
+                            mainInput.value.focus({ preventScroll: true });
+                        }
+
+                        // 2. Scroll to position (Snap above input panel)
                         const el = document.getElementById(`cell-${r}-${c}`);
                         if (el) {
                             setTimeout(() => {
-                                el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                            }, 400); // Slight delay for keyboard animation
+                                el.style.scrollMarginBottom = '80px'; // Approx input panel height
+                                el.scrollIntoView({ block: 'end', behavior: 'smooth' });
+                            }, 400); // 400ms delay for keyboard
                         }
                     });
                 };
