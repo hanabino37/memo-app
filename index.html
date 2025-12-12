@@ -20,7 +20,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 11: Emergency Refactor - Strict Shell */
+        /* Phase 12: Unified App Shell */
         html,
         body {
             margin: 0;
@@ -95,137 +95,81 @@
 
     <div id="app" v-cloak>
 
-        <!-- ==================== HOME SCREEN ==================== -->
-        <template v-if="viewState === 'home'">
-            <!-- Home Header -->
-            <header class="h-14 bg-white shadow-sm flex items-center justify-between px-4 z-20 shrink-0 relative">
+        <!-- Unified App Shell -->
+
+        <!-- HEADER -->
+        <header class="h-14 bg-white shadow-sm flex items-center justify-between px-4 z-20 shrink-0 relative">
+
+            <!-- HOME HEADER CONTENT -->
+            <template v-if="viewState === 'home'">
                 <div class="w-10"></div> <!-- Spacer -->
                 <h1 class="font-bold text-lg text-center">メモ一覧</h1>
                 <button class="w-10 h-10 flex items-center justify-center text-blue-600 active:bg-blue-50 rounded-full"
                     @click="openInitModal">
                     <i class="fa-solid fa-plus text-lg"></i>
                 </button>
-            </header>
+            </template>
 
-            <!-- Home List -->
-            <main class="scroll-container p-4">
-                <div v-if="memoList.length === 0" class="text-center mt-20 text-gray-400">
-                    <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
-                    <p>メモがありません</p>
-                    <button @click="openInitModal" class="mt-4 text-blue-600 font-bold underline">新規作成</button>
-                </div>
-
-                <transition-group name="list" tag="div" class="space-y-3">
-                    <div v-for="memo in memoList" :key="memo.id"
-                        class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 active:bg-gray-50 flex items-center justify-between group transition-all"
-                        @click="openMemo(memo.id)">
-                        <div class="flex-1 min-w-0 pr-4">
-                            <h3 class="font-bold text-lg truncate text-gray-800">{{ memo.title || '無題のメモ' }}</h3>
-                            <p class="text-xs text-gray-400 mt-1">
-                                <i class="fa-regular fa-clock mr-1"></i>{{ formatDate(memo.updatedAt) }}
-                                <span class="mx-2">|</span>
-                                <span class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{{ memo.colCount
-                                    }}列</span>
-                            </p>
-                        </div>
-                        <button
-                            class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 active:bg-red-50 rounded-full transition-colors"
-                            @click.stop="confirmDelete(memo.id)">
-                            <i class="fa-regular fa-trash-can"></i>
-                        </button>
-                    </div>
-                </transition-group>
-            </main>
-        </template>
-
-        <!-- ==================== EDITOR SCREEN ==================== -->
-        <template v-else-if="viewState === 'editor'">
-            <!-- Header -->
-            <header class="h-14 bg-white shadow-sm flex items-center justify-between px-4 z-20 shrink-0 relative">
-
-                <!-- Normal Header State -->
+            <!-- EDITOR HEADER CONTENT -->
+            <template v-else-if="viewState === 'editor'">
+                <!-- Normal Header -->
                 <template v-if="!ui.showSearchBar">
-                    <!-- Back Button (Save & Home) -->
                     <button
                         class="w-10 h-10 flex items-center justify-center text-gray-500 active:bg-gray-100 rounded-full"
                         @click="saveAndClose">
                         <i class="fa-solid fa-chevron-left text-lg"></i>
                     </button>
-
-                    <!-- Title -->
                     <h1 class="font-bold text-lg text-center truncate max-w-[150px] leading-tight" @click="editTitle">
                         {{ activeMemo.title || '無題' }}
                     </h1>
-
-                    <!-- Menu Button -->
                     <div class="relative">
                         <button
                             class="w-10 h-10 flex items-center justify-center text-gray-500 active:bg-gray-100 rounded-full"
                             @click="toggleMenu">
                             <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
                         </button>
-
-                        <!-- Dropdown Menu -->
+                        <!-- Menu Dropdown -->
                         <div v-if="ui.showMenu"
                             class="absolute right-0 top-12 bg-white shadow-xl rounded-lg w-56 py-2 border border-gray-100 z-50 text-sm overflow-hidden animate-fade-in-down"
                             @click.stop>
-
-                            <!-- Save & Exit -->
                             <button
                                 class="w-full text-left px-4 py-3 active:bg-gray-50 flex items-center gap-3 border-b border-gray-100 mb-1 font-bold text-gray-700"
                                 @click="saveAndClose">
-                                <i class="fa-solid fa-check text-blue-500 w-4"></i>
-                                <span>保存して終了</span>
+                                <i class="fa-solid fa-check text-blue-500 w-4"></i><span>保存して終了</span>
                             </button>
-
-                            <!-- Add Column Options -->
                             <div v-if="canAddColumn" class="border-b border-gray-100 pb-1 mb-1">
                                 <div class="px-4 py-2 text-xs text-gray-400 font-bold uppercase tracking-wider">列を追加
                                 </div>
                                 <button v-for="n in possibleNewColumns" :key="n"
                                     class="w-full text-left px-4 py-3 active:bg-blue-50 hover:bg-gray-50 flex items-center gap-3"
                                     @click="addColumn(n)">
-                                    <i class="fa-solid fa-plus text-blue-500 w-4"></i>
-                                    <span>右に{{ n }}列追加</span>
+                                    <i class="fa-solid fa-plus text-blue-500 w-4"></i><span>右に{{ n }}列追加</span>
                                 </button>
                             </div>
-
-                            <!-- Data & Utils -->
                             <button
                                 class="w-full text-left px-4 py-3 active:bg-blue-50 hover:bg-gray-50 flex items-center gap-3"
-                                @click="openSearch">
-                                <i class="fa-solid fa-magnifying-glass text-gray-500 w-4"></i>
-                                <span>検索</span>
-                            </button>
+                                @click="openSearch"><i
+                                    class="fa-solid fa-magnifying-glass text-gray-500 w-4"></i><span>検索</span></button>
                             <button
                                 class="w-full text-left px-4 py-3 active:bg-blue-50 hover:bg-gray-50 flex items-center gap-3"
-                                @click="openStats">
-                                <i class="fa-solid fa-chart-pie text-orange-500 w-4"></i>
-                                <span>集計 (色別)</span>
-                            </button>
+                                @click="openStats"><i class="fa-solid fa-chart-pie text-orange-500 w-4"></i><span>集計
+                                    (色別)</span></button>
                             <button
                                 class="w-full text-left px-4 py-3 active:bg-blue-50 hover:bg-gray-50 flex items-center gap-3"
-                                @click="openItemStats">
-                                <i class="fa-solid fa-chart-bar text-teal-500 w-4"></i>
-                                <span>集計 (項目別)</span>
-                            </button>
+                                @click="openItemStats"><i class="fa-solid fa-chart-bar text-teal-500 w-4"></i><span>集計
+                                    (項目別)</span></button>
                             <button
                                 class="w-full text-left px-4 py-3 active:bg-blue-50 hover:bg-gray-50 flex items-center gap-3"
-                                @click="saveAsImage">
-                                <i class="fa-solid fa-image text-purple-500 w-4"></i>
-                                <span>画像として保存</span>
-                            </button>
+                                @click="saveAsImage"><i
+                                    class="fa-solid fa-image text-purple-500 w-4"></i><span>画像として保存</span></button>
                             <button
                                 class="w-full text-left px-4 py-3 active:bg-blue-50 hover:bg-gray-50 flex items-center gap-3"
-                                @click="shareCSV">
-                                <i class="fa-solid fa-file-csv text-green-500 w-4"></i>
-                                <span>データを送る (CSV)</span>
-                            </button>
+                                @click="shareCSV"><i class="fa-solid fa-file-csv text-green-500 w-4"></i><span>データを送る
+                                    (CSV)</span></button>
                         </div>
                     </div>
                 </template>
-
-                <!-- Search Bar State -->
+                <!-- Search Header -->
                 <template v-else>
                     <div class="flex-1 flex items-center gap-2 animate-fade-in-down w-full">
                         <div class="relative flex-1">
@@ -237,38 +181,61 @@
                         <button class="font-bold text-blue-600 text-sm px-2" @click="closeSearch">完了</button>
                     </div>
                 </template>
-            </header>
+            </template>
+        </header>
 
-            <div v-if="ui.showMenu" class="fixed inset-0 z-10" @click="ui.showMenu = false"></div>
+        <!-- MENU OVERLAY -->
+        <div v-if="ui.showMenu" class="fixed inset-0 z-10" @click="ui.showMenu = false"></div>
 
-            <!-- Main Table Area (Scrollable) -->
-            <main class="scroll-container bg-white" id="capture-area">
+        <!-- MAIN SCROLL CONTAINER -->
+        <main class="scroll-container bg-white" id="capture-area">
+
+            <!-- HOME VIEW -->
+            <div v-if="viewState === 'home'" class="p-4 max-w-2xl mx-auto w-full">
+                <div v-if="memoList.length === 0" class="text-center mt-20 text-gray-400">
+                    <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+                    <p>メモがありません</p>
+                    <button @click="openInitModal" class="mt-4 text-blue-600 font-bold underline">新規作成</button>
+                </div>
+                <transition-group name="list" tag="div" class="space-y-3">
+                    <div v-for="memo in memoList" :key="memo.id"
+                        class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 active:bg-gray-50 flex items-center justify-between group transition-all"
+                        @click="openMemo(memo.id)">
+                        <div class="flex-1 min-w-0 pr-4">
+                            <h3 class="font-bold text-lg truncate text-gray-800">{{ memo.title || '無題のメモ' }}</h3>
+                            <p class="text-xs text-gray-400 mt-1"><i class="fa-regular fa-clock mr-1"></i>{{
+                                formatDate(memo.updatedAt) }} <span class="mx-2">|</span> <span
+                                    class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{{ memo.colCount }}列</span>
+                            </p>
+                        </div>
+                        <button
+                            class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-red-500 active:bg-red-50 rounded-full transition-colors"
+                            @click.stop="confirmDelete(memo.id)">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                </transition-group>
+            </div>
+
+            <!-- EDITOR VIEW -->
+            <div v-else-if="viewState === 'editor' && activeMemo" class="w-full">
                 <div class="mobile-table-wrapper">
                     <div class="grid border-b border-gray-200"
                         :style="{ gridTemplateColumns: `repeat(${activeMemo.colCount}, minmax(80px, 1fr))` }">
-
                         <!-- Headers -->
                         <div v-for="(header, idx) in activeMemo.headers" :key="'h-'+idx"
                             class="bg-gray-50 border-r border-gray-200 border-b-2 border-b-gray-300 p-3 text-sm font-bold text-gray-600 text-center sticky top-0 z-10 select-none cursor-pointer active:bg-gray-200"
                             @contextmenu.prevent="editHeader(idx)" v-long-press="() => editHeader(idx)">
                             {{ header }}
                         </div>
-
                         <!-- Rows -->
                         <template v-for="(row, rIdx) in activeMemo.data" :key="'r-'+rIdx">
                             <div v-for="(cell, cIdx) in row" :key="'c-'+rIdx+'-'+cIdx" :id="'cell-'+rIdx+'-'+cIdx"
                                 class="h-14 border-b border-gray-100 border-r border-gray-200 p-1 relative transition-opacity duration-300"
-                                :class="[
-                                     getCellColorClass(cell.color),
-                                     isSelected(rIdx, cIdx) ? 'z-0' : '',
-                                     isDimmed(cell) ? 'opacity-25' : ''
-                                 ]" @click="selectCell(rIdx, cIdx)">
-
-                                <div
-                                    class="flex items-center justify-center w-full h-full text-center text-sm font-medium break-all whitespace-pre-wrap leading-tight pointer-events-none">
-                                    {{ cell.text }}
-                                </div>
-
+                                :class="{ 'opacity-25': isDimmed(cell), 'z-0': isSelected(rIdx, cIdx) }"
+                                @click="selectCell(rIdx, cIdx)">
+                                <div class="flex items-center justify-center w-full h-full text-center text-sm font-medium break-all whitespace-pre-wrap leading-tight pointer-events-none"
+                                    :class="getCellColorClass(cell.color)">{{ cell.text }}</div>
                                 <div v-if="isSelected(rIdx, cIdx)"
                                     class="absolute inset-0 border-[3px] border-green-500 pointer-events-none z-10 shadow-sm rounded-sm animate-pulse-fast">
                                 </div>
@@ -276,111 +243,112 @@
                         </template>
                     </div>
                 </div>
-            </main>
+            </div>
+        </main>
 
-            <!-- Statistics Modal (Color Only) -->
-            <div v-if="ui.showStatsModal"
-                class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-6"
-                @click.self="ui.showStatsModal = false">
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-bounce-in">
-                    <div class="bg-orange-500 p-4 text-center">
-                        <h2 class="text-white text-lg font-bold"><i class="fa-solid fa-chart-pie mr-2"></i>色別集計</h2>
+        <!-- Statistics Modal (Color Only) -->
+        <div v-if="ui.showStatsModal"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-6"
+            @click.self="ui.showStatsModal = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-bounce-in">
+                <div class="bg-orange-500 p-4 text-center">
+                    <h2 class="text-white text-lg font-bold"><i class="fa-solid fa-chart-pie mr-2"></i>色別集計</h2>
+                </div>
+                <div class="p-4">
+                    <ul class="space-y-3">
+                        <li v-for="stat in statsData" :key="stat.key"
+                            class="flex items-center justify-between border-b border-gray-100 pb-2">
+                            <div class="flex items-center gap-3">
+                                <span class="w-6 h-6 rounded-full border border-gray-200 shadow-sm"
+                                    :class="stat.bgClass"></span>
+                                <span class="font-medium text-gray-600">{{ stat.label }}</span>
+                            </div>
+                            <span class="font-bold text-gray-800 text-lg">{{ stat.count }}<span
+                                    class="text-xs text-gray-400 ml-1">件</span></span>
+                        </li>
+                    </ul>
+                    <div
+                        class="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center bg-gray-50 -mx-4 -mb-4 px-6 py-4">
+                        <span class="text-gray-500 font-bold">合計</span>
+                        <span class="text-2xl font-bold text-blue-600">{{ totalCount }}<span
+                                class="text-sm text-gray-400 ml-1">件</span></span>
                     </div>
-                    <div class="p-4">
-                        <ul class="space-y-3">
-                            <li v-for="stat in statsData" :key="stat.key"
-                                class="flex items-center justify-between border-b border-gray-100 pb-2">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-6 h-6 rounded-full border border-gray-200 shadow-sm"
-                                        :class="stat.bgClass"></span>
-                                    <span class="font-medium text-gray-600">{{ stat.label }}</span>
-                                </div>
-                                <span class="font-bold text-gray-800 text-lg">{{ stat.count }}<span
-                                        class="text-xs text-gray-400 ml-1">件</span></span>
-                            </li>
-                        </ul>
-                        <div
-                            class="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center bg-gray-50 -mx-4 -mb-4 px-6 py-4">
-                            <span class="text-gray-500 font-bold">合計</span>
-                            <span class="text-2xl font-bold text-blue-600">{{ totalCount }}<span
-                                    class="text-sm text-gray-400 ml-1">件</span></span>
+                </div>
+                <button @click="ui.showStatsModal = false"
+                    class="w-full bg-gray-100 text-gray-600 py-3 font-bold hover:bg-gray-200">
+                    閉じる
+                </button>
+            </div>
+        </div>
+
+        <!-- New Statistics Modal (Item - Column Selection) -->
+        <div v-if="ui.showItemStatsModal"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-6"
+            @click.self="ui.showItemStatsModal = false">
+            <div
+                class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-bounce-in flex flex-col">
+                <div class="bg-teal-500 p-4 text-center shrink-0">
+                    <h2 class="text-white text-lg font-bold"><i class="fa-solid fa-chart-bar mr-2"></i>項目別集計</h2>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <!-- Column Selector -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-bold text-gray-700">集計する列を選択</label>
+                        <div class="relative">
+                            <select v-model="ui.itemStatsSelectedColIndex"
+                                class="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-teal-500 font-bold">
+                                <option v-for="(header, idx) in activeMemo.headers" :key="idx" :value="idx">
+                                    {{ header }}
+                                </option>
+                            </select>
+                            <div
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <i class="fa-solid fa-chevron-down text-xs"></i>
+                            </div>
                         </div>
                     </div>
-                    <button @click="ui.showStatsModal = false"
-                        class="w-full bg-gray-100 text-gray-600 py-3 font-bold hover:bg-gray-200">
+
+                    <!-- Result Display -->
+                    <div class="bg-teal-50 rounded-xl p-4 border border-teal-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-bold text-teal-800">選択した項目名</span>
+                            <span class="text-sm font-bold text-teal-600">{{
+                                activeMemo.headers[ui.itemStatsSelectedColIndex] || '-' }}</span>
+                        </div>
+                        <div class="border-t border-teal-200 my-2"></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-bold text-teal-800">数値合計 <span
+                                    class="text-xs font-normal text-teal-600">(括弧除く)</span></span>
+                            <span class="text-3xl font-bold text-teal-600">{{ selectedColSum.toLocaleString()
+                                }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-gray-100 shrink-0 bg-gray-50">
+                    <button @click="ui.showItemStatsModal = false"
+                        class="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 shadow-sm active:scale-[0.98]">
                         閉じる
                     </button>
                 </div>
             </div>
+        </div>
 
-            <!-- New Statistics Modal (Item - Column Selection) -->
-            <div v-if="ui.showItemStatsModal"
-                class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-6"
-                @click.self="ui.showItemStatsModal = false">
-                <div
-                    class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-bounce-in flex flex-col">
-                    <div class="bg-teal-500 p-4 text-center shrink-0">
-                        <h2 class="text-white text-lg font-bold"><i class="fa-solid fa-chart-bar mr-2"></i>項目別集計</h2>
-                    </div>
-
-                    <div class="p-6 space-y-6">
-                        <!-- Column Selector -->
-                        <div class="space-y-2">
-                            <label class="block text-sm font-bold text-gray-700">集計する列を選択</label>
-                            <div class="relative">
-                                <select v-model="ui.itemStatsSelectedColIndex"
-                                    class="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-teal-500 font-bold">
-                                    <option v-for="(header, idx) in activeMemo.headers" :key="idx" :value="idx">
-                                        {{ header }}
-                                    </option>
-                                </select>
-                                <div
-                                    class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                    <i class="fa-solid fa-chevron-down text-xs"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Result Display -->
-                        <div class="bg-teal-50 rounded-xl p-4 border border-teal-100">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-sm font-bold text-teal-800">選択した項目名</span>
-                                <span class="text-sm font-bold text-teal-600">{{
-                                    activeMemo.headers[ui.itemStatsSelectedColIndex] || '-' }}</span>
-                            </div>
-                            <div class="border-t border-teal-200 my-2"></div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm font-bold text-teal-800">数値合計 <span
-                                        class="text-xs font-normal text-teal-600">(括弧除く)</span></span>
-                                <span class="text-3xl font-bold text-teal-600">{{ selectedColSum.toLocaleString()
-                                    }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="p-4 border-t border-gray-100 shrink-0 bg-gray-50">
-                        <button @click="ui.showItemStatsModal = false"
-                            class="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 shadow-sm active:scale-[0.98]">
-                            閉じる
-                        </button>
-                    </div>
-                </div>
+        <!-- Image Preview Modal -->
+        <div v-if="ui.showImageModal" class="fixed inset-0 bg-black/80 z-50 flex flex-col p-4 animate-fade-in">
+            <div class="flex-1 flex items-center justify-center overflow-hidden relative">
+                <img :src="generatedImage" class="max-w-full max-h-full object-contain rounded shadow-lg bg-white">
+                <p
+                    class="absolute bottom-4 left-0 right-0 text-center text-white text-sm bg-black/50 py-1 rounded-full mx-auto w-max px-4 backdrop-blur">
+                    長押しして保存
+                </p>
             </div>
-
-            <!-- Image Preview Modal -->
-            <div v-if="ui.showImageModal" class="fixed inset-0 bg-black/80 z-50 flex flex-col p-4 animate-fade-in">
-                <div class="flex-1 flex items-center justify-center overflow-hidden relative">
-                    <img :src="generatedImage" class="max-w-full max-h-full object-contain rounded shadow-lg bg-white">
-                    <p
-                        class="absolute bottom-4 left-0 right-0 text-center text-white text-sm bg-black/50 py-1 rounded-full mx-auto w-max px-4 backdrop-blur">
-                        長押しして保存
-                    </p>
-                </div>
-                <button @click="ui.showImageModal = false"
-                    class="mt-4 bg-white/10 text-white py-3 rounded-xl font-bold backdrop-blur-md active:bg-white/20 border border-white/20">
-                    閉じる
-                </button>
-            </div>
+            <button @click="ui.showImageModal = false"
+                class="mt-4 bg-white/10 text-white py-3 rounded-xl font-bold backdrop-blur-md active:bg-white/20 border border-white/20">
+                閉じる
+            </button>
+        </div>
         </template>
 
         <!-- Init / New Memo Modal (Shared) -->
@@ -417,7 +385,7 @@
 
         <!-- Input Panel (Global Fixed) -->
         <!-- Controlled via JS visualViewport -->
-        <div v-show="ui.showInputPanel" ref="inputPanel" class="floating-panel">
+        <div v-show="ui.showInputPanel && viewState === 'editor'" ref="inputPanel" class="floating-panel">
             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <button @click="closePanel" class="text-gray-400 px-2 py-1 text-sm">キャンセル</button>
 
