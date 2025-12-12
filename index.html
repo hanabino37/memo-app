@@ -20,7 +20,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 10: App Shell Architecture */
+        /* Phase 11: Emergency Refactor - Strict Shell */
         html,
         body {
             margin: 0;
@@ -33,35 +33,47 @@
             /* Disable bounce */
         }
 
-        .app-shell {
+        #app {
             display: flex;
             flex-direction: column;
-            height: 100dvh;
-            /* Dynamic Viewport Height */
             width: 100%;
+            height: 100%;
             background-color: #f3f4f6;
         }
 
-        .content-area {
+        /* Scroll Container (Main) */
+        .scroll-container {
             flex: 1;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             width: 100%;
+            /* 300px padding ensures content can be scrolled above the panel */
+            padding-bottom: 300px;
             position: relative;
-            z-index: 1;
         }
 
-        .input-panel-area {
-            flex: none;
+        /* Mobile Table Fixes */
+        .mobile-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            /* Allow horizontal scroll if needed, though we try to fit */
+        }
+
+        /* Floating Input Panel (Controlled by JS Visual Viewport) */
+        .floating-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
             width: 100%;
             background-color: white;
-            z-index: 999;
+            z-index: 9999;
             border-top: 1px solid #e5e7eb;
             padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .scroll-spacer {
-            height: 300px;
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -81,7 +93,7 @@
 
 <body>
 
-    <div id="app" class="app-shell" v-cloak>
+    <div id="app" v-cloak>
 
         <!-- ==================== HOME SCREEN ==================== -->
         <template v-if="viewState === 'home'">
@@ -96,7 +108,7 @@
             </header>
 
             <!-- Home List -->
-            <main class="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full">
+            <main class="scroll-container p-4">
                 <div v-if="memoList.length === 0" class="text-center mt-20 text-gray-400">
                     <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
                     <p>メモがありません</p>
@@ -229,9 +241,9 @@
 
             <div v-if="ui.showMenu" class="fixed inset-0 z-10" @click="ui.showMenu = false"></div>
 
-            <!-- Main Table Area -->
-            <main class="content-area" id="capture-area">
-                <div class="min-w-full inline-block align-top p-4">
+            <!-- Main Table Area (Scrollable) -->
+            <main class="scroll-container bg-white" id="capture-area">
+                <div class="mobile-table-wrapper">
                     <div class="grid border-b border-gray-200"
                         :style="{ gridTemplateColumns: `repeat(${activeMemo.colCount}, minmax(80px, 1fr))` }">
 
@@ -264,7 +276,6 @@
                         </template>
                     </div>
                 </div>
-                <div class="scroll-spacer"></div>
             </main>
 
             <!-- Statistics Modal (Color Only) -->
@@ -404,8 +415,9 @@
             </div>
         </div>
 
-        <!-- Input Panel (Footer) -->
-        <footer class="input-panel-area" v-if="ui.showInputPanel">
+        <!-- Input Panel (Global Fixed) -->
+        <!-- Controlled via JS visualViewport -->
+        <div v-show="ui.showInputPanel" ref="inputPanel" class="floating-panel">
             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <button @click="closePanel" class="text-gray-400 px-2 py-1 text-sm">キャンセル</button>
 
@@ -430,7 +442,7 @@
                     placeholder="入力..."
                     class="w-full text-xl font-bold bg-white border border-gray-300 rounded-lg px-4 py-3 text-center focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all shadow-inner">
             </div>
-        </footer>
+        </div>
 
     </div>
 
@@ -502,6 +514,7 @@
                 const generatedImage = ref(null);
                 const mainInput = ref(null);
                 const searchInput = ref(null);
+                const inputPanel = ref(null); // Ref for Visual Viewport
 
                 const colors = [
                     { key: 'white', bgClass: 'bg-white', label: '白' },
@@ -579,6 +592,28 @@
                 // --- Lifecycle & Migration ---
                 onMounted(() => {
                     loadLibrary();
+
+                    // Phase 11: Visual Viewport Handler
+                    if (window.visualViewport) {
+                        const handleResize = () => {
+                            if (!inputPanel.value) return;
+
+                            const layoutViewportHeight = window.innerHeight;
+                            const visualViewportHeight = window.visualViewport.height;
+                            const visualViewportTop = window.visualViewport.offsetTop;
+
+                            // Calculate offset
+                            const offset = layoutViewportHeight - visualViewportHeight - visualViewportTop;
+
+                            // Apply bottom position
+                            // Use max(0) to ensure it doesn't float up too high if calculations go weird
+                            // But generally, offset IS the bottom keyboard height
+                            inputPanel.value.style.bottom = `${Math.max(0, offset)}px`;
+                        };
+
+                        window.visualViewport.addEventListener('resize', handleResize);
+                        window.visualViewport.addEventListener('scroll', handleResize);
+                    }
                 });
 
                 const loadLibrary = () => {
@@ -701,12 +736,11 @@
                         if (mainInput.value) {
                             // 1. Focus without scrolling to prevent jumping
                             mainInput.value.focus({ preventScroll: true });
-                            // 2. Standard Scroll (Meta tag handles viewport resize)
+                            // 2. Standard Scroll (Simpler logic as VVP handles panel)
                             const el = document.getElementById(`cell-${r}-${c}`);
-                            if (el && mainInput.value) {
-                                // Phase 10: Use nearest to just ensure visibility within the reduced viewport
+                            if (el) {
                                 setTimeout(() => {
-                                    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                                    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
                                 }, 100);
                             }
                         }
@@ -798,128 +832,54 @@
                     const bodyRows = memo.data.map(row => row.map(c => `"${c.text.replace(/"/g, '""')}"`).join(',')).join('\n');
                     const csvContent = `${headerRow}\n${bodyRows}`;
 
-                    if (navigator.share) {
-                        const file = new File([csvContent], `${memo.title}.csv`, { type: "text/csv" });
-                        try { await navigator.share({ title: memo.title, files: [file] }); return; } catch (e) { }
-                    }
-                    try { await navigator.clipboard.writeText(csvContent); alert('クリップボードにコピーしました'); } catch (e) { alert('コピーに失敗しました'); }
+                    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${memo.title}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
                 };
-
-                const openSearch = () => {
-                    ui.showMenu = false;
-                    ui.showSearchBar = true;
-                    nextTick(() => { if (searchInput.value) searchInput.value.focus(); });
-                };
-                const closeSearch = () => {
-                    ui.showSearchBar = false;
-                    ui.searchQuery = '';
-                };
-                const openStats = () => {
-                    ui.showMenu = false;
-                    ui.showStatsModal = true;
-                };
-                const openItemStats = () => {
-                    ui.showMenu = false;
-                    ui.itemStatsSelectedColIndex = 0; // Default to first column
-                    ui.showItemStatsModal = true;
-                };
-
-                // Helper for v-for key
-                const isSelected = (r, c) => ui.selectedCell?.r === r && ui.selectedCell?.c === c;
 
                 return {
-                    viewState, memoList, activeMemo, ui, tempColCount, colors, generatedImage, mainInput, searchInput,
-                    statsData, totalCount, possibleNewColumns, canAddColumn, selectedColSum,
-                    openInitModal, createMemo, openMemo, confirmDelete, formatDate,
-                    saveAndClose, selectCell, commitAndNext, closePanel, editHeader, editTitle, toggleMenu,
-                    addColumn, saveAsImage, shareCSV, openSearch, closeSearch, openStats, openItemStats,
-                    getCellColorClass, isSelected, isDimmed
+                    library,
+                    viewState,
+                    activeMemoId,
+                    ui,
+                    tempColCount,
+                    generatedImage,
+                    mainInput,
+                    searchInput,
+                    inputPanel,
+                    colors,
+                    activeMemo,
+                    memoList,
+                    canAddColumn,
+                    possibleNewColumns,
+                    statsData,
+                    totalCount,
+                    selectedColSum,
+                    openInitModal,
+                    createMemo,
+                    openMemo,
+                    confirmDelete,
+                    formatDate,
+                    saveAndClose,
+                    getCellColorClass,
+                    isDimmed,
+                    selectCell,
+                    commitAndNext,
+                    closePanel,
+                    editHeader,
+                    editTitle,
+                    toggleMenu,
+                    addColumn,
+                    saveAsImage,
+                    shareCSV
                 };
             }
         }).mount('#app');
     </script>
-
-    <style>
-        /* Global Animations */
-        @keyframes fade-in-down {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .animate-fade-in-down {
-            animation: fade-in-down 0.2s ease-out;
-        }
-
-        @keyframes bounce-in {
-            0% {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-
-            70% {
-                opacity: 1;
-                transform: scale(1.02);
-            }
-
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .animate-bounce-in {
-            animation: bounce-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes pulse-fast {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.6;
-            }
-        }
-
-        .animate-pulse-fast {
-            animation: pulse-fast 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        @keyframes fade-in {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        .animate-fade-in {
-            animation: fade-in 0.2s ease-out;
-        }
-
-        /* List Transitions */
-        .list-enter-active,
-        .list-leave-active {
-            transition: all 0.3s ease;
-        }
-
-        .list-enter-from,
-        .list-leave-to {
-            opacity: 0;
-            transform: translateX(-30px);
-        }
-    </style>
 </body>
 
 </html>
