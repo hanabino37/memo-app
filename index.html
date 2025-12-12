@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom">
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom, interactive-widget=resizes-content">
     <title>Table Memo</title>
 
     <!-- Tailwind CSS -->
@@ -253,7 +253,7 @@
                             </button>
                         </div>
 
-                        <button @click="commitAndNext"
+                        <button @mousedown.prevent="commitAndNext"
                             class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md active:bg-blue-700">
                             次へ <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
                         </button>
@@ -673,31 +673,15 @@
                         if (mainInput.value) {
                             // 1. Focus without scrolling to prevent jumping
                             mainInput.value.focus({ preventScroll: true });
-                        }
-
-                        // 2. Scroll to position (Snap above input panel)
-                        // 2. Snap Scroll (Manual Calculation for iOS)
-                        setTimeout(() => {
-                            const cell = document.getElementById(`cell-${r}-${c}`);
-                            const panel = document.getElementById('input-panel');
-
-                            if (cell && panel) {
-                                const panelHeight = panel.offsetHeight;
-                                const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-
-                                // Calculate absolute bottom of the cell
-                                const rect = cell.getBoundingClientRect();
-                                const absoluteBottom = window.scrollY + rect.bottom;
-
-                                // Target: Scroll so that cell bottom touches (Viewport Bottom - Panel Height)
-                                const targetScrollY = absoluteBottom - viewportHeight + panelHeight;
-
-                                window.scrollTo({
-                                    top: targetScrollY,
-                                    behavior: 'smooth'
-                                });
+                            // 2. Standard Scroll (Meta tag handles viewport resize)
+                            const el = document.getElementById(`cell-${r}-${c}`);
+                            if (el && mainInput.value) {
+                                // Wait slightly for resize to happen
+                                setTimeout(() => {
+                                    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                                }, 100);
                             }
-                        }, 500); // Wait for keyboard animation completely
+                        }
                     });
                 };
 
