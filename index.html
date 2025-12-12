@@ -200,7 +200,7 @@
             <main class="flex-1 overflow-auto bg-white relative" id="capture-area">
                 <div class="min-w-full inline-block align-top pb-32">
                     <div class="grid border-b border-gray-200"
-                        :style="{ gridTemplateColumns: `repeat(${activeMemo.colCount}, minmax(120px, 1fr))` }">
+                        :style="{ gridTemplateColumns: `repeat(${activeMemo.colCount}, minmax(80px, 1fr))` }">
 
                         <!-- Headers -->
                         <div v-for="(header, idx) in activeMemo.headers" :key="'h-'+idx"
@@ -211,7 +211,7 @@
 
                         <!-- Rows -->
                         <template v-for="(row, rIdx) in activeMemo.data" :key="'r-'+rIdx">
-                            <div v-for="(cell, cIdx) in row" :key="'c-'+rIdx+'-'+cIdx"
+                            <div v-for="(cell, cIdx) in row" :key="'c-'+rIdx+'-'+cIdx" :id="'cell-'+rIdx+'-'+cIdx"
                                 class="h-14 border-b border-gray-100 border-r border-gray-200 p-1 relative transition-opacity duration-300"
                                 :class="[
                                      getCellColorClass(cell.color),
@@ -669,7 +669,16 @@
                     ui.showInputPanel = true;
                     ui.showMenu = false;
 
-                    nextTick(() => { if (mainInput.value) mainInput.value.focus(); });
+                    nextTick(() => {
+                        if (mainInput.value) mainInput.value.focus();
+                        // Scroll to center (UX fix for mobile keyboard)
+                        const el = document.getElementById(`cell-${r}-${c}`);
+                        if (el) {
+                            setTimeout(() => {
+                                el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                            }, 300); // Slight delay for keyboard animation
+                        }
+                    });
                 };
 
                 const commitAndNext = () => {
