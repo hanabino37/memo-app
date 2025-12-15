@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom, interactive-widget=resizes-content">
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom">
     <title>Table Memo</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,7 +16,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* FINAL STABLE CSS */
+        /* Phase 17: Visual Viewport Force Lift */
         html,
         body {
             margin: 0;
@@ -44,12 +44,12 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             width: 100%;
-            /* Make space for the fixed panel so content isn't hidden */
-            padding-bottom: 300px;
+            /* Extra padding to ensure last row can be scrolled above the panel */
+            padding-bottom: 50vh;
             position: relative;
         }
 
-        /* Floating Input Panel (CSS Only - No JS Conflict) */
+        /* Floating Input Panel */
         .floating-panel {
             position: fixed;
             bottom: 0;
@@ -58,8 +58,11 @@
             background-color: white;
             z-index: 9999;
             border-top: 1px solid #e5e7eb;
+            /* Default padding for home bar (will be adjusted by JS) */
             padding-bottom: env(safe-area-inset-bottom);
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            transition: bottom 0.1s ease-out;
+            /* Smooth lift */
         }
 
         /* Mobile Table Styling */
@@ -122,7 +125,6 @@
     <div id="app" v-cloak>
 
         <header class="h-14 bg-white shadow-sm flex items-center justify-between px-4 z-20 shrink-0 relative">
-
             <template v-if="viewState === 'home'">
                 <div class="w-10"></div>
                 <h1 class="font-bold text-lg text-center">メモ一覧</h1>
@@ -205,7 +207,6 @@
         <div v-if="ui.showMenu" class="fixed inset-0 z-10" @click="ui.showMenu = false"></div>
 
         <main class="scroll-container bg-white" id="capture-area">
-
             <div v-if="viewState === 'home'" class="p-4 max-w-2xl mx-auto w-full">
                 <div v-if="memoList.length === 0" class="text-center mt-20 text-gray-400">
                     <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
@@ -311,8 +312,7 @@
                             </select>
                             <div
                                 class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                <i class="fa-solid fa-chevron-down text-xs"></i>
-                            </div>
+                                <i class="fa-solid fa-chevron-down text-xs"></i></div>
                         </div>
                     </div>
                     <div class="bg-teal-50 rounded-xl p-4 border border-teal-100">
@@ -371,7 +371,7 @@
             </div>
         </div>
 
-        <div v-show="ui.showInputPanel && viewState === 'editor'" class="floating-panel">
+        <div v-show="ui.showInputPanel && viewState === 'editor'" ref="inputPanel" class="floating-panel">
             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <button @click="closePanel" class="text-gray-400 px-2 py-1 text-sm">キャンセル</button>
                 <div class="flex gap-2">
@@ -427,6 +427,7 @@
                 const generatedImage = ref(null);
                 const mainInput = ref(null);
                 const searchInput = ref(null);
+                const inputPanel = ref(null); // Ref for Visual Viewport
 
                 const colors = [
                     { key: 'white', bgClass: 'bg-white', label: '白' },
@@ -436,11 +437,7 @@
                     { key: 'green', bgClass: 'bg-green-100', label: '緑' }
                 ];
 
-                // FIX: Active Memo returns null if not found (Prevents White Screen)
-                const activeMemo = computed(() => {
-                    return library.value.find(m => m.id === activeMemoId.value) || null;
-                });
-
+                const activeMemo = computed(() => library.value.find(m => m.id === activeMemoId.value) || null);
                 const memoList = computed(() => [...library.value].sort((a, b) => b.updatedAt - a.updatedAt));
                 const maxCols = 6;
                 const canAddColumn = computed(() => activeMemo.value && activeMemo.value.colCount < maxCols);
@@ -475,8 +472,36 @@
                     return total;
                 });
 
-                // FIX: Removed Visual Viewport JS Logic (Rely on CSS only)
-                onMounted(() => { loadLibrary(); });
+                // Phase 17: Re-introduce Visual Viewport Logic
+                onMounted(() => {
+                    loadLibrary();
+
+                    if (window.visualViewport) {
+                        const handleResize = () => {
+                            if (!inputPanel.value) return;
+
+                            const v = window.visualViewport;
+                            // Calculate keyboard height (hidden area at bottom)
+                            const hiddenBottom = window.innerHeight - v.height - v.offsetTop;
+
+                            // Apply force lift
+                            // Use Math.max(0) to ensure we don't do weird negative positioning
+                            const liftAmount = Math.max(0, hiddenBottom);
+
+                            inputPanel.value.style.bottom = `${liftAmount}px`;
+
+                            // Adjust padding: If lifted (keyboard open), remove safe-area padding
+                            if (liftAmount > 10) {
+                                inputPanel.value.style.paddingBottom = '0px';
+                            } else {
+                                inputPanel.value.style.paddingBottom = 'env(safe-area-inset-bottom)';
+                            }
+                        };
+
+                        window.visualViewport.addEventListener('resize', handleResize);
+                        window.visualViewport.addEventListener('scroll', handleResize);
+                    }
+                });
 
                 const loadLibrary = () => {
                     const storedLib = localStorage.getItem('tm_library');
@@ -532,7 +557,6 @@
                     nextTick(() => {
                         if (mainInput.value) {
                             mainInput.value.focus({ preventScroll: true });
-                            // Simple Scroll to Center
                             const el = document.getElementById(`cell-${r}-${c}`);
                             if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
                         }
@@ -601,7 +625,7 @@
                 };
 
                 return {
-                    library, viewState, activeMemoId, ui, tempColCount, generatedImage, mainInput, searchInput, colors, activeMemo, memoList, canAddColumn, possibleNewColumns, statsData, totalCount, selectedColSum,
+                    library, viewState, activeMemoId, ui, tempColCount, generatedImage, mainInput, searchInput, colors, activeMemo, memoList, canAddColumn, possibleNewColumns, statsData, totalCount, selectedColSum, inputPanel,
                     openInitModal, createMemo, openMemo, confirmDelete, formatDate, saveAndClose, getCellColorClass, isDimmed, isSelected, selectCell, commitAndNext, closePanel, editHeader, editTitle, toggleMenu, addColumn, saveAsImage, shareCSV
                 };
             }
