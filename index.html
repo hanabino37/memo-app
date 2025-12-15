@@ -7,20 +7,16 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom, interactive-widget=resizes-content">
     <title>Table Memo</title>
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- html2canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-    <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 12: Unified App Shell */
+        /* FINAL STABLE CSS */
         html,
         body {
             margin: 0;
@@ -31,6 +27,8 @@
             /* Disable global scroll */
             overscroll-behavior: none;
             /* Disable bounce */
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #app {
@@ -38,28 +36,20 @@
             flex-direction: column;
             width: 100%;
             height: 100%;
-            background-color: #f3f4f6;
         }
 
-        /* Scroll Container (Main) */
+        /* Scroll Container (Main Content) */
         .scroll-container {
             flex: 1;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             width: 100%;
-            /* 300px padding ensures content can be scrolled above the panel */
+            /* Make space for the fixed panel so content isn't hidden */
             padding-bottom: 300px;
             position: relative;
         }
 
-        /* Mobile Table Fixes */
-        .mobile-table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            /* Allow horizontal scroll if needed, though we try to fit */
-        }
-
-        /* Floating Input Panel (Controlled by JS Visual Viewport) */
+        /* Floating Input Panel (CSS Only - No JS Conflict) */
         .floating-panel {
             position: fixed;
             bottom: 0;
@@ -72,8 +62,11 @@
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .safe-area-bottom {
-            padding-bottom: env(safe-area-inset-bottom);
+        /* Mobile Table Styling */
+        .mobile-table-wrapper {
+            width: 100%;
+            overflow-x: hidden;
+            /* Force fit */
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -88,6 +81,39 @@
         [v-cloak] {
             display: none;
         }
+
+        /* Animation Utilities */
+        .animate-fade-in-down {
+            animation: fadeInDown 0.2s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-bounce-in {
+            animation: bounceIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes bounceIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 
@@ -95,14 +121,10 @@
 
     <div id="app" v-cloak>
 
-        <!-- Unified App Shell -->
-
-        <!-- HEADER -->
         <header class="h-14 bg-white shadow-sm flex items-center justify-between px-4 z-20 shrink-0 relative">
 
-            <!-- HOME HEADER CONTENT -->
             <template v-if="viewState === 'home'">
-                <div class="w-10"></div> <!-- Spacer -->
+                <div class="w-10"></div>
                 <h1 class="font-bold text-lg text-center">メモ一覧</h1>
                 <button class="w-10 h-10 flex items-center justify-center text-blue-600 active:bg-blue-50 rounded-full"
                     @click="openInitModal">
@@ -110,9 +132,7 @@
                 </button>
             </template>
 
-            <!-- EDITOR HEADER CONTENT -->
             <template v-else-if="viewState === 'editor'">
-                <!-- Normal Header -->
                 <template v-if="!ui.showSearchBar">
                     <button
                         class="w-10 h-10 flex items-center justify-center text-gray-500 active:bg-gray-100 rounded-full"
@@ -120,7 +140,7 @@
                         <i class="fa-solid fa-chevron-left text-lg"></i>
                     </button>
                     <h1 class="font-bold text-lg text-center truncate max-w-[150px] leading-tight" @click="editTitle">
-                        {{ activeMemo.title || '無題' }}
+                        {{ activeMemo ? (activeMemo.title || '無題') : '読み込み中...' }}
                     </h1>
                     <div class="relative">
                         <button
@@ -128,7 +148,6 @@
                             @click="toggleMenu">
                             <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
                         </button>
-                        <!-- Menu Dropdown -->
                         <div v-if="ui.showMenu"
                             class="absolute right-0 top-12 bg-white shadow-xl rounded-lg w-56 py-2 border border-gray-100 z-50 text-sm overflow-hidden animate-fade-in-down"
                             @click.stop>
@@ -169,7 +188,6 @@
                         </div>
                     </div>
                 </template>
-                <!-- Search Header -->
                 <template v-else>
                     <div class="flex-1 flex items-center gap-2 animate-fade-in-down w-full">
                         <div class="relative flex-1">
@@ -184,13 +202,10 @@
             </template>
         </header>
 
-        <!-- MENU OVERLAY -->
         <div v-if="ui.showMenu" class="fixed inset-0 z-10" @click="ui.showMenu = false"></div>
 
-        <!-- MAIN SCROLL CONTAINER -->
         <main class="scroll-container bg-white" id="capture-area">
 
-            <!-- HOME VIEW -->
             <div v-if="viewState === 'home'" class="p-4 max-w-2xl mx-auto w-full">
                 <div v-if="memoList.length === 0" class="text-center mt-20 text-gray-400">
                     <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
@@ -217,18 +232,15 @@
                 </transition-group>
             </div>
 
-            <!-- EDITOR VIEW -->
             <div v-else-if="viewState === 'editor' && activeMemo" class="w-full">
                 <div class="mobile-table-wrapper">
                     <div class="grid border-b border-gray-200"
                         :style="{ gridTemplateColumns: `repeat(${activeMemo.colCount}, minmax(80px, 1fr))` }">
-                        <!-- Headers -->
                         <div v-for="(header, idx) in activeMemo.headers" :key="'h-'+idx"
                             class="bg-gray-50 border-r border-gray-200 border-b-2 border-b-gray-300 p-3 text-sm font-bold text-gray-600 text-center sticky top-0 z-10 select-none cursor-pointer active:bg-gray-200"
                             @contextmenu.prevent="editHeader(idx)" v-long-press="() => editHeader(idx)">
                             {{ header }}
                         </div>
-                        <!-- Rows -->
                         <template v-for="(row, rIdx) in activeMemo.data" :key="'r-'+rIdx">
                             <div v-for="(cell, cIdx) in row" :key="'c-'+rIdx+'-'+cIdx" :id="'cell-'+rIdx+'-'+cIdx"
                                 class="h-14 border-b border-gray-100 border-r border-gray-200 p-1 relative transition-opacity duration-300"
@@ -237,70 +249,65 @@
                                 <div class="flex items-center justify-center w-full h-full text-center text-sm font-medium break-all whitespace-pre-wrap leading-tight pointer-events-none"
                                     :class="getCellColorClass(cell.color)">{{ cell.text }}</div>
                                 <div v-if="isSelected(rIdx, cIdx)"
-                                    class="absolute inset-0 border-[3px] border-green-500 pointer-events-none z-10 shadow-sm rounded-sm animate-pulse-fast">
+                                    class="absolute inset-0 border-[3px] border-green-500 pointer-events-none z-10 shadow-sm rounded-sm">
                                 </div>
                             </div>
                         </template>
                     </div>
                 </div>
             </div>
+
+            <div v-else-if="viewState === 'editor'" class="flex items-center justify-center h-full text-gray-400">
+                <p>読み込み中...</p>
+            </div>
         </main>
 
-        <!-- Statistics Modal (Color Only) -->
         <div v-if="ui.showStatsModal"
             class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-6"
             @click.self="ui.showStatsModal = false">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-bounce-in">
                 <div class="bg-orange-500 p-4 text-center">
-                    <h2 class="text-white text-lg font-bold"><i class="fa-solid fa-chart-pie mr-2"></i>色別集計</h2>
+                    <h2 class="text-white text-lg font-bold">色別集計</h2>
                 </div>
                 <div class="p-4">
                     <ul class="space-y-3">
                         <li v-for="stat in statsData" :key="stat.key"
                             class="flex items-center justify-between border-b border-gray-100 pb-2">
-                            <div class="flex items-center gap-3">
-                                <span class="w-6 h-6 rounded-full border border-gray-200 shadow-sm"
-                                    :class="stat.bgClass"></span>
-                                <span class="font-medium text-gray-600">{{ stat.label }}</span>
-                            </div>
+                            <div class="flex items-center gap-3"><span
+                                    class="w-6 h-6 rounded-full border border-gray-200 shadow-sm"
+                                    :class="stat.bgClass"></span><span class="font-medium text-gray-600">{{ stat.label
+                                    }}</span></div>
                             <span class="font-bold text-gray-800 text-lg">{{ stat.count }}<span
                                     class="text-xs text-gray-400 ml-1">件</span></span>
                         </li>
                     </ul>
                     <div
                         class="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center bg-gray-50 -mx-4 -mb-4 px-6 py-4">
-                        <span class="text-gray-500 font-bold">合計</span>
-                        <span class="text-2xl font-bold text-blue-600">{{ totalCount }}<span
-                                class="text-sm text-gray-400 ml-1">件</span></span>
+                        <span class="text-gray-500 font-bold">合計</span><span class="text-2xl font-bold text-blue-600">{{
+                            totalCount }}<span class="text-sm text-gray-400 ml-1">件</span></span>
                     </div>
                 </div>
                 <button @click="ui.showStatsModal = false"
-                    class="w-full bg-gray-100 text-gray-600 py-3 font-bold hover:bg-gray-200">
-                    閉じる
-                </button>
+                    class="w-full bg-gray-100 text-gray-600 py-3 font-bold hover:bg-gray-200">閉じる</button>
             </div>
         </div>
 
-        <!-- New Statistics Modal (Item - Column Selection) -->
         <div v-if="ui.showItemStatsModal"
             class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-6"
             @click.self="ui.showItemStatsModal = false">
             <div
                 class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-bounce-in flex flex-col">
                 <div class="bg-teal-500 p-4 text-center shrink-0">
-                    <h2 class="text-white text-lg font-bold"><i class="fa-solid fa-chart-bar mr-2"></i>項目別集計</h2>
+                    <h2 class="text-white text-lg font-bold">項目別集計</h2>
                 </div>
-
                 <div class="p-6 space-y-6">
-                    <!-- Column Selector -->
                     <div class="space-y-2">
                         <label class="block text-sm font-bold text-gray-700">集計する列を選択</label>
                         <div class="relative">
                             <select v-model="ui.itemStatsSelectedColIndex"
                                 class="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-teal-500 font-bold">
-                                <option v-for="(header, idx) in activeMemo.headers" :key="idx" :value="idx">
-                                    {{ header }}
-                                </option>
+                                <option v-for="(header, idx) in (activeMemo ? activeMemo.headers : [])" :key="idx"
+                                    :value="idx">{{ header }}</option>
                             </select>
                             <div
                                 class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
@@ -308,50 +315,37 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Result Display -->
                     <div class="bg-teal-50 rounded-xl p-4 border border-teal-100">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-bold text-teal-800">選択した項目名</span>
-                            <span class="text-sm font-bold text-teal-600">{{
-                                activeMemo.headers[ui.itemStatsSelectedColIndex] || '-' }}</span>
-                        </div>
+                        <div class="flex justify-between items-center mb-2"><span
+                                class="text-sm font-bold text-teal-800">選択した項目名</span><span
+                                class="text-sm font-bold text-teal-600">{{ activeMemo && activeMemo.headers ?
+                                activeMemo.headers[ui.itemStatsSelectedColIndex] : '-' }}</span></div>
                         <div class="border-t border-teal-200 my-2"></div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-bold text-teal-800">数値合計 <span
-                                    class="text-xs font-normal text-teal-600">(括弧除く)</span></span>
-                            <span class="text-3xl font-bold text-teal-600">{{ selectedColSum.toLocaleString()
-                                }}</span>
+                        <div class="flex justify-between items-center"><span
+                                class="text-sm font-bold text-teal-800">数値合計 <span
+                                    class="text-xs font-normal text-teal-600">(括弧除く)</span></span><span
+                                class="text-3xl font-bold text-teal-600">{{ selectedColSum.toLocaleString() }}</span>
                         </div>
                     </div>
                 </div>
-
-                <div class="p-4 border-t border-gray-100 shrink-0 bg-gray-50">
-                    <button @click="ui.showItemStatsModal = false"
-                        class="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 shadow-sm active:scale-[0.98]">
-                        閉じる
-                    </button>
+                <div class="p-4 border-t border-gray-100 shrink-0 bg-gray-50"><button
+                        @click="ui.showItemStatsModal = false"
+                        class="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 shadow-sm">閉じる</button>
                 </div>
             </div>
         </div>
 
-        <!-- Image Preview Modal -->
         <div v-if="ui.showImageModal" class="fixed inset-0 bg-black/80 z-50 flex flex-col p-4 animate-fade-in">
             <div class="flex-1 flex items-center justify-center overflow-hidden relative">
                 <img :src="generatedImage" class="max-w-full max-h-full object-contain rounded shadow-lg bg-white">
                 <p
                     class="absolute bottom-4 left-0 right-0 text-center text-white text-sm bg-black/50 py-1 rounded-full mx-auto w-max px-4 backdrop-blur">
-                    長押しして保存
-                </p>
+                    長押しして保存</p>
             </div>
             <button @click="ui.showImageModal = false"
-                class="mt-4 bg-white/10 text-white py-3 rounded-xl font-bold backdrop-blur-md active:bg-white/20 border border-white/20">
-                閉じる
-            </button>
+                class="mt-4 bg-white/10 text-white py-3 rounded-xl font-bold backdrop-blur-md active:bg-white/20 border border-white/20">閉じる</button>
         </div>
-        </template>
 
-        <!-- Init / New Memo Modal (Shared) -->
         <div v-if="ui.showInitModal"
             class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-6">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-bounce-in">
@@ -365,30 +359,21 @@
                         <button v-for="n in 5" :key="n"
                             class="aspect-square rounded-xl border-2 flex items-center justify-center text-lg font-bold transition-all"
                             :class="tempColCount === (n+1) ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110 shadow-md' : 'border-gray-200 text-gray-400 hover:border-blue-300'"
-                            @click="tempColCount = n + 1">
-                            {{ n + 1 }}
-                        </button>
+                            @click="tempColCount = n + 1">{{ n + 1 }}</button>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <button @click="ui.showInitModal = false"
-                            class="w-full bg-gray-100 text-gray-500 py-3 rounded-xl font-bold">
-                            キャンセル
-                        </button>
+                            class="w-full bg-gray-100 text-gray-500 py-3 rounded-xl font-bold">キャンセル</button>
                         <button @click="createMemo"
-                            class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg active:scale-[0.98] transition-transform">
-                            作成
-                        </button>
+                            class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg">作成</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Input Panel (Global Fixed) -->
-        <!-- Controlled via JS visualViewport -->
-        <div v-show="ui.showInputPanel && viewState === 'editor'" ref="inputPanel" class="floating-panel">
+        <div v-show="ui.showInputPanel && viewState === 'editor'" class="floating-panel">
             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <button @click="closePanel" class="text-gray-400 px-2 py-1 text-sm">キャンセル</button>
-
                 <div class="flex gap-2">
                     <button v-for="color in colors" :key="color.key"
                         class="w-8 h-8 rounded-full border border-gray-200 shadow-sm transform transition active:scale-95 flex items-center justify-center"
@@ -398,13 +383,10 @@
                             :class="color.key === 'white' ? 'text-gray-600' : 'text-white/80'"></i>
                     </button>
                 </div>
-
                 <button @touchstart.prevent="commitAndNext" @mousedown.prevent="commitAndNext"
-                    class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md active:bg-blue-700">
-                    次へ <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
-                </button>
+                    class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md active:bg-blue-700">次へ
+                    <i class="fa-solid fa-arrow-right ml-1 text-xs"></i></button>
             </div>
-
             <div class="p-4 bg-gray-50">
                 <input ref="mainInput" type="text" maxlength="8" v-model="ui.editValue" @keyup.enter="commitAndNext"
                     placeholder="入力..."
@@ -417,72 +399,34 @@
     <script>
         const { createApp, reactive, computed, ref, nextTick, onMounted, toRaw } = Vue;
 
-        // UUID generator
-        const uuidv4 = () => {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        };
+        const uuidv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => (Math.random() * 16 | 0, c == 'x' ? (Math.random() * 16 | 0) : ((Math.random() * 16 | 0) & 0x3 | 0x8)).toString(16));
 
         const longPressDirective = {
             beforeMount(el, binding) {
                 let pressTimer = null;
-                const start = (e) => {
-                    if (e.type === 'click' && e.button !== 0) return;
-                    pressTimer = setTimeout(() => {
-                        binding.value(e);
-                    }, 600);
-                };
-                const cancel = () => {
-                    if (pressTimer !== null) {
-                        clearTimeout(pressTimer);
-                        pressTimer = null;
-                    }
-                };
-                el.addEventListener("mousedown", start);
-                el.addEventListener("touchstart", start, { passive: true });
-                el.addEventListener("click", cancel);
-                el.addEventListener("mouseout", cancel);
-                el.addEventListener("touchend", cancel);
-                el.addEventListener("touchcancel", cancel);
+                const start = (e) => { if (e.type === 'click' && e.button !== 0) return; pressTimer = setTimeout(() => binding.value(e), 600); };
+                const cancel = () => { if (pressTimer !== null) { clearTimeout(pressTimer); pressTimer = null; } };
+                el.addEventListener("mousedown", start); el.addEventListener("touchstart", start, { passive: true });
+                el.addEventListener("click", cancel); el.addEventListener("mouseout", cancel); el.addEventListener("touchend", cancel); el.addEventListener("touchcancel", cancel);
             }
         };
 
         createApp({
-            directives: {
-                'long-press': longPressDirective
-            },
+            directives: { 'long-press': longPressDirective },
             setup() {
-                // --- State ---
-                // Library is the source of truth
-                const library = ref([]); // Array of Memo Objects
-
-                // View State
-                const viewState = ref('home'); // 'home' | 'editor'
+                const library = ref([]);
+                const viewState = ref('home');
                 const activeMemoId = ref(null);
 
-                // Temporary / UI State
                 const ui = reactive({
-                    showInitModal: false,
-                    showMenu: false,
-                    showInputPanel: false,
-                    showImageModal: false,
-                    showStatsModal: false,
-                    showItemStatsModal: false, // New
-                    showSearchBar: false,
-                    searchQuery: '',
-                    selectedCell: null,
-                    editValue: '',
-                    editColor: 'white',
-                    itemStatsSelectedColIndex: 0 // New: Dropdown selection
+                    showInitModal: false, showMenu: false, showInputPanel: false, showImageModal: false, showStatsModal: false, showItemStatsModal: false,
+                    showSearchBar: false, searchQuery: '', selectedCell: null, editValue: '', editColor: 'white', itemStatsSelectedColIndex: 0
                 });
 
                 const tempColCount = ref(3);
                 const generatedImage = ref(null);
                 const mainInput = ref(null);
                 const searchInput = ref(null);
-                const inputPanel = ref(null); // Ref for Visual Viewport
 
                 const colors = [
                     { key: 'white', bgClass: 'bg-white', label: '白' },
@@ -492,160 +436,69 @@
                     { key: 'green', bgClass: 'bg-green-100', label: '緑' }
                 ];
 
-                // --- Computed ---
-                // Active Memo Proxy
+                // FIX: Active Memo returns null if not found (Prevents White Screen)
                 const activeMemo = computed(() => {
-                    return library.value.find(m => m.id === activeMemoId.value) || {};
+                    return library.value.find(m => m.id === activeMemoId.value) || null;
                 });
 
-                const memoList = computed(() => {
-                    // Sort by updated descending
-                    return [...library.value].sort((a, b) => b.updatedAt - a.updatedAt);
-                });
-
+                const memoList = computed(() => [...library.value].sort((a, b) => b.updatedAt - a.updatedAt));
                 const maxCols = 6;
-                const canAddColumn = computed(() => activeMemo.value.colCount < maxCols);
+                const canAddColumn = computed(() => activeMemo.value && activeMemo.value.colCount < maxCols);
                 const possibleNewColumns = computed(() => {
-                    if (!activeMemo.value.colCount) return [];
+                    if (!activeMemo.value || !activeMemo.value.colCount) return [];
                     const arr = [];
-                    const remaining = maxCols - activeMemo.value.colCount;
-                    for (let i = 1; i <= remaining; i++) arr.push(i);
+                    for (let i = 1; i <= maxCols - activeMemo.value.colCount; i++) arr.push(i);
                     return arr;
                 });
 
                 const statsData = computed(() => {
-                    if (!ui.showStatsModal || !activeMemo.value.data) return [];
+                    if (!ui.showStatsModal || !activeMemo.value || !activeMemo.value.data) return [];
                     const counts = {};
                     colors.forEach(c => counts[c.key] = 0);
-
-                    activeMemo.value.data.forEach(row => {
-                        row.forEach(cell => {
-                            if (counts[cell.color] !== undefined) counts[cell.color]++;
-                        });
-                    });
-
-                    return colors.map(c => ({
-                        key: c.key,
-                        label: c.label,
-                        bgClass: c.bgClass,
-                        count: counts[c.key]
-                    }));
+                    activeMemo.value.data.forEach(row => row.forEach(cell => { if (counts[cell.color] !== undefined) counts[cell.color]++; }));
+                    return colors.map(c => ({ key: c.key, label: c.label, bgClass: c.bgClass, count: counts[c.key] }));
                 });
 
-                const totalCount = computed(() => {
-                    return statsData.value.reduce((sum, item) => sum + item.count, 0);
-                });
+                const totalCount = computed(() => statsData.value.reduce((sum, item) => sum + item.count, 0));
 
-                // Item Stats (New Logic: Selected Column Sum)
                 const selectedColSum = computed(() => {
-                    if (!ui.showItemStatsModal || !activeMemo.value.data) return 0;
+                    if (!ui.showItemStatsModal || !activeMemo.value || !activeMemo.value.data) return 0;
                     const idx = ui.itemStatsSelectedColIndex;
                     if (idx === undefined || idx < 0 || idx >= activeMemo.value.colCount) return 0;
-
                     let total = 0;
                     activeMemo.value.data.forEach(row => {
                         const text = row[idx]?.text || '';
-                        // Exclusion: Bracketed text
                         if (/[()（）]/.test(text)) return;
-
-                        // Inclusion: Sum number
                         const match = text.match(/\d+/);
-                        if (match) {
-                            total += parseInt(match[0], 10);
-                        }
+                        if (match) total += parseInt(match[0], 10);
                     });
                     return total;
                 });
 
-                // --- Lifecycle & Migration ---
-                onMounted(() => {
-                    loadLibrary();
-
-                    // Phase 11: Visual Viewport Handler
-                    if (window.visualViewport) {
-                        const handleResize = () => {
-                            if (!inputPanel.value) return;
-
-                            const layoutViewportHeight = window.innerHeight;
-                            const visualViewportHeight = window.visualViewport.height;
-                            const visualViewportTop = window.visualViewport.offsetTop;
-
-                            // Calculate offset
-                            const offset = layoutViewportHeight - visualViewportHeight - visualViewportTop;
-
-                            // Apply bottom position
-                            // Use max(0) to ensure it doesn't float up too high if calculations go weird
-                            // But generally, offset IS the bottom keyboard height
-                            inputPanel.value.style.bottom = `${Math.max(0, offset)}px`;
-                        };
-
-                        window.visualViewport.addEventListener('resize', handleResize);
-                        window.visualViewport.addEventListener('scroll', handleResize);
-                    }
-                });
+                // FIX: Removed Visual Viewport JS Logic (Rely on CSS only)
+                onMounted(() => { loadLibrary(); });
 
                 const loadLibrary = () => {
                     const storedLib = localStorage.getItem('tm_library');
                     if (storedLib) {
-                        try {
-                            library.value = JSON.parse(storedLib);
-                        } catch (e) { console.error(e); }
+                        try { library.value = JSON.parse(storedLib); } catch (e) { console.error(e); }
                         return;
                     }
-
-                    // Migration Check
-                    const legacyData = localStorage.getItem('tm_data');
-                    if (legacyData) {
-                        try {
-                            const parsedData = JSON.parse(legacyData);
-                            const legacyMeta = JSON.parse(localStorage.getItem('tm_meta') || '{}');
-                            const legacyTitle = localStorage.getItem('tm_title') || '以前のメモ';
-
-                            const newMemo = {
-                                id: uuidv4(),
-                                title: legacyTitle,
-                                updatedAt: Date.now(),
-                                colCount: legacyMeta.colCount || 2,
-                                headers: legacyMeta.headers || ['項目1', '項目2'],
-                                data: parsedData
-                            };
-
-                            library.value = [newMemo];
-                            saveLibrary();
-                            try { localStorage.removeItem('tm_data'); localStorage.removeItem('tm_meta'); localStorage.removeItem('tm_title'); } catch (e) { }
-                        } catch (e) { }
-                    }
                 };
 
-                const saveLibrary = () => {
-                    localStorage.setItem('tm_library', JSON.stringify(toRaw(library.value)));
-                };
+                const saveLibrary = () => { localStorage.setItem('tm_library', JSON.stringify(toRaw(library.value))); };
+                const autoSave = () => { if (activeMemoId.value) { const memo = library.value.find(m => m.id === activeMemoId.value); if (memo) memo.updatedAt = Date.now(); saveLibrary(); } };
 
-                const autoSave = () => {
-                    if (activeMemoId.value) {
-                        const memo = library.value.find(m => m.id === activeMemoId.value);
-                        if (memo) {
-                            memo.updatedAt = Date.now();
-                        }
-                        saveLibrary();
-                    }
-                };
-
-                // --- Actions: Home ---
                 const openInitModal = () => ui.showInitModal = true;
 
                 const createMemo = () => {
                     const cols = tempColCount.value;
                     const newMemo = {
-                        id: uuidv4(),
-                        title: '新規メモ',
-                        updatedAt: Date.now(),
-                        colCount: cols,
+                        id: uuidv4(), title: '新規メモ', updatedAt: Date.now(), colCount: cols,
                         headers: Array.from({ length: cols }, (_, i) => `項目${i + 1}`),
                         data: [Array.from({ length: cols }, () => ({ text: '', color: 'white' }))]
                     };
-
-                    library.value.unshift(newMemo); // Add to top
+                    library.value.unshift(newMemo);
                     saveLibrary();
                     ui.showInitModal = false;
                     openMemo(newMemo.id);
@@ -654,44 +507,20 @@
                 const openMemo = (id) => {
                     activeMemoId.value = id;
                     viewState.value = 'editor';
-                    // Reset UI states
-                    ui.showMenu = false;
-                    ui.showSearchBar = false;
-                    ui.searchQuery = '';
-                    ui.selectedCell = null;
+                    ui.showMenu = false; ui.showSearchBar = false; ui.searchQuery = ''; ui.selectedCell = null;
                 };
 
-                const confirmDelete = (id) => {
-                    if (confirm('このメモを削除しますか？')) {
-                        const idx = library.value.findIndex(m => m.id === id);
-                        if (idx !== -1) {
-                            library.value.splice(idx, 1);
-                            saveLibrary();
-                        }
-                    }
-                };
+                const confirmDelete = (id) => { if (confirm('このメモを削除しますか？')) { const idx = library.value.findIndex(m => m.id === id); if (idx !== -1) { library.value.splice(idx, 1); saveLibrary(); } } };
+                const formatDate = (ts) => new Date(ts).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-                const formatDate = (ts) => {
-                    return new Date(ts).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                };
-
-                // --- Actions: Editor ---
-                const saveAndClose = () => {
-                    autoSave();
-                    activeMemoId.value = null;
-                    viewState.value = 'home';
-                };
-
+                const saveAndClose = () => { autoSave(); activeMemoId.value = null; viewState.value = 'home'; };
                 const getCellColorClass = (key) => colors.find(c => c.key === key)?.bgClass || 'bg-white';
+                const isDimmed = (cell) => { if (!ui.searchQuery) return false; return !cell.text.includes(ui.searchQuery); };
+                const isSelected = (r, c) => ui.selectedCell && ui.selectedCell.r === r && ui.selectedCell.c === c;
 
-                const isDimmed = (cell) => {
-                    if (!ui.searchQuery) return false;
-                    return !cell.text.includes(ui.searchQuery);
-                };
-
-                // Input Logic
                 const selectCell = (r, c) => {
-                    if (ui.selectedCell?.r === r && ui.selectedCell?.c === c && ui.showInputPanel) return;
+                    if (isSelected(r, c) && ui.showInputPanel) return;
+                    if (!activeMemo.value) return;
 
                     const cell = activeMemo.value.data[r][c];
                     ui.selectedCell = { r, c };
@@ -702,34 +531,25 @@
 
                     nextTick(() => {
                         if (mainInput.value) {
-                            // 1. Focus without scrolling to prevent jumping
                             mainInput.value.focus({ preventScroll: true });
-                            // 2. Standard Scroll (Simpler logic as VVP handles panel)
+                            // Simple Scroll to Center
                             const el = document.getElementById(`cell-${r}-${c}`);
-                            if (el) {
-                                setTimeout(() => {
-                                    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                                }, 100);
-                            }
+                            if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
                         }
                     });
                 };
 
                 const commitAndNext = () => {
-                    if (!ui.selectedCell || !activeMemoId.value) return;
+                    if (!ui.selectedCell || !activeMemo.value) return;
                     const { r, c } = ui.selectedCell;
                     const memo = activeMemo.value;
-
-                    // Update
                     memo.data[r][c].text = ui.editValue;
                     memo.data[r][c].color = ui.editColor;
-                    autoSave(); // Save on commit
+                    autoSave();
 
-                    // Next logic
                     const isLastCol = c === memo.colCount - 1;
                     if (isLastCol) {
                         if (r === memo.data.length - 1) {
-                            // Add row
                             memo.data.push(Array.from({ length: memo.colCount }, () => ({ text: '', color: 'white' })));
                             autoSave();
                             selectCell(r + 1, 0);
@@ -741,39 +561,16 @@
                     }
                 };
 
-                const closePanel = () => {
-                    ui.showInputPanel = false;
-                    ui.selectedCell = null;
-                };
-
-                // Header Actions
-                const editHeader = (idx) => {
-                    const newName = prompt('列名を編集', activeMemo.value.headers[idx]);
-                    if (newName !== null) {
-                        activeMemo.value.headers[idx] = newName.substring(0, 10);
-                        autoSave();
-                    }
-                };
-
-                const editTitle = () => {
-                    const newName = prompt('タイトルを編集', activeMemo.value.title);
-                    if (newName) {
-                        activeMemo.value.title = newName;
-                        autoSave();
-                    }
-                };
-
-                // Menu Utilities
+                const closePanel = () => { ui.showInputPanel = false; ui.selectedCell = null; };
+                const editHeader = (idx) => { const newName = prompt('列名を編集', activeMemo.value.headers[idx]); if (newName !== null) { activeMemo.value.headers[idx] = newName.substring(0, 10); autoSave(); } };
+                const editTitle = () => { const newName = prompt('タイトルを編集', activeMemo.value.title); if (newName) { activeMemo.value.title = newName; autoSave(); } };
                 const toggleMenu = () => ui.showMenu = !ui.showMenu;
 
                 const addColumn = (count) => {
                     const memo = activeMemo.value;
                     if (memo.colCount + count > maxCols) return;
-
                     for (let i = 0; i < count; i++) memo.headers.push(`項目${memo.colCount + i + 1}`);
-                    memo.data.forEach(row => {
-                        for (let i = 0; i < count; i++) row.push({ text: '', color: 'white' });
-                    });
+                    memo.data.forEach(row => { for (let i = 0; i < count; i++) row.push({ text: '', color: 'white' }); });
                     memo.colCount += count;
                     autoSave();
                     ui.showMenu = false;
@@ -789,8 +586,7 @@
                         const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', windowWidth: el.scrollWidth, windowHeight: el.scrollHeight });
                         generatedImage.value = canvas.toDataURL("image/jpeg", 0.9);
                         ui.showImageModal = true;
-                    } catch (e) { console.error(e); alert('画像生成に失敗しました'); }
-                    finally { el.style.overflow = originalOverflow; }
+                    } catch (e) { console.error(e); alert('画像生成に失敗しました'); } finally { el.style.overflow = originalOverflow; }
                 };
 
                 const shareCSV = async () => {
@@ -799,51 +595,14 @@
                     const headerRow = memo.headers.join(',');
                     const bodyRows = memo.data.map(row => row.map(c => `"${c.text.replace(/"/g, '""')}"`).join(',')).join('\n');
                     const csvContent = `${headerRow}\n${bodyRows}`;
-
                     const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv' });
                     const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${memo.title}.csv`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    const a = document.createElement('a'); a.href = url; a.download = `${memo.title}.csv`; a.click(); URL.revokeObjectURL(url);
                 };
 
                 return {
-                    library,
-                    viewState,
-                    activeMemoId,
-                    ui,
-                    tempColCount,
-                    generatedImage,
-                    mainInput,
-                    searchInput,
-                    inputPanel,
-                    colors,
-                    activeMemo,
-                    memoList,
-                    canAddColumn,
-                    possibleNewColumns,
-                    statsData,
-                    totalCount,
-                    selectedColSum,
-                    openInitModal,
-                    createMemo,
-                    openMemo,
-                    confirmDelete,
-                    formatDate,
-                    saveAndClose,
-                    getCellColorClass,
-                    isDimmed,
-                    selectCell,
-                    commitAndNext,
-                    closePanel,
-                    editHeader,
-                    editTitle,
-                    toggleMenu,
-                    addColumn,
-                    saveAsImage,
-                    shareCSV
+                    library, viewState, activeMemoId, ui, tempColCount, generatedImage, mainInput, searchInput, colors, activeMemo, memoList, canAddColumn, possibleNewColumns, statsData, totalCount, selectedColSum,
+                    openInitModal, createMemo, openMemo, confirmDelete, formatDate, saveAndClose, getCellColorClass, isDimmed, isSelected, selectCell, commitAndNext, closePanel, editHeader, editTitle, toggleMenu, addColumn, saveAsImage, shareCSV
                 };
             }
         }).mount('#app');
