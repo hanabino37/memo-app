@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom">
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom, interactive-widget=resizes-content">
     <title>Table Memo</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,7 +16,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 17+18: Visual Viewport Force Lift + Event Handlers */
+        /* Phase 20: Native Interactive Widget Support */
         html,
         body {
             margin: 0;
@@ -58,11 +58,8 @@
             background-color: white;
             z-index: 9999;
             border-top: 1px solid #e5e7eb;
-            /* Default padding for home bar (will be adjusted by JS) */
             padding-bottom: env(safe-area-inset-bottom);
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            transition: bottom 0.1s ease-out;
-            /* Smooth lift */
         }
 
         /* Mobile Table Styling */
@@ -312,7 +309,8 @@
                             </select>
                             <div
                                 class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                <i class="fa-solid fa-chevron-down text-xs"></i></div>
+                                <i class="fa-solid fa-chevron-down text-xs"></i>
+                            </div>
                         </div>
                     </div>
                     <div class="bg-teal-50 rounded-xl p-4 border border-teal-100">
@@ -388,7 +386,7 @@
                     <i class="fa-solid fa-arrow-right ml-1 text-xs"></i></button>
             </div>
             <div class="p-4 bg-gray-50">
-                <input ref="mainInput" type="text" maxlength="8" v-model="ui.editValue" @keyup.enter="commitAndNext"
+                <input ref="mainInput" type="text" maxlength="12" v-model="ui.editValue" @keyup.enter="commitAndNext"
                     placeholder="入力..."
                     class="w-full text-xl font-bold bg-white border border-gray-300 rounded-lg px-4 py-3 text-center focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all shadow-inner">
             </div>
@@ -472,35 +470,10 @@
                     return total;
                 });
 
-                // Phase 17: Re-introduce Visual Viewport Logic
+                // Phase 20: Native Support (No manual JS calc)
                 onMounted(() => {
                     loadLibrary();
-
-                    if (window.visualViewport) {
-                        const handleResize = () => {
-                            if (!inputPanel.value) return;
-
-                            const v = window.visualViewport;
-                            // Calculate keyboard height (hidden area at bottom)
-                            const hiddenBottom = window.innerHeight - v.height - v.offsetTop;
-
-                            // Apply force lift
-                            // Use Math.max(0) to ensure we don't do weird negative positioning
-                            const liftAmount = Math.max(0, hiddenBottom);
-
-                            inputPanel.value.style.bottom = `${liftAmount}px`;
-
-                            // Adjust padding: If lifted (keyboard open), remove safe-area padding
-                            if (liftAmount > 10) {
-                                inputPanel.value.style.paddingBottom = '0px';
-                            } else {
-                                inputPanel.value.style.paddingBottom = 'env(safe-area-inset-bottom)';
-                            }
-                        };
-
-                        window.visualViewport.addEventListener('resize', handleResize);
-                        window.visualViewport.addEventListener('scroll', handleResize);
-                    }
+                    // JSによる位置調整はすべて削除し、ブラウザの自動調整に任せます
                 });
 
                 const loadLibrary = () => {
