@@ -5,18 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom">
-    <title>Table Memo</title>
+    <title>Table Memo (Debug)</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 23 Styles */
+        /* Phase 23 Styles + Debug Overlay */
         html,
         body {
             margin: 0;
@@ -55,8 +52,6 @@
             border-top: 1px solid #e5e7eb;
             padding-bottom: env(safe-area-inset-bottom);
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            /* Removed transition for snappier response during rapid typing */
-            /* transition: bottom 0.1s ease-out; */
         }
 
         .mobile-table-wrapper {
@@ -108,10 +103,28 @@
                 transform: scale(1);
             }
         }
+
+        /* DEBUG OVERLAY STYLE */
+        #debug-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            font-size: 10px;
+            padding: 4px;
+            z-index: 10000;
+            pointer-events: none;
+            font-family: monospace;
+            max-width: 100%;
+            text-align: left;
+        }
     </style>
 </head>
 
 <body>
+
+    <div id="debug-overlay">Initializing...</div>
 
     <div id="app" v-cloak>
 
@@ -420,6 +433,7 @@
                 const mainInput = ref(null);
                 const searchInput = ref(null);
                 const inputPanel = ref(null);
+                const debugInfo = document.getElementById('debug-overlay'); // Debug element
 
                 const colors = [
                     { key: 'white', bgClass: 'bg-white', label: '白' },
@@ -464,16 +478,29 @@
                     return total;
                 });
 
-                // Phase 23: GLOBAL Update Function
+                // Phase 24: DEBUG MODE (Keep logic, add visual log)
                 const updatePanelPosition = () => {
                     if (!inputPanel.value || !window.visualViewport) return;
+
                     const v = window.visualViewport;
                     const h = window.innerHeight;
-                    const hiddenHeight = h - (v.height + v.offsetTop);
+                    const offset = v.offsetTop;
+                    const vHeight = v.height;
+
+                    const hiddenHeight = h - (vHeight + offset);
                     const liftAmount = Math.max(0, hiddenHeight);
 
                     inputPanel.value.style.bottom = `${liftAmount}px`;
                     inputPanel.value.style.paddingBottom = liftAmount > 10 ? '0px' : 'env(safe-area-inset-bottom)';
+
+                    // DEBUG LOG
+                    if (debugInfo) {
+                        debugInfo.innerHTML = `
+                        WinH: ${h} | VV.H: ${vHeight.toFixed(1)} <br>
+                        VV.Top: ${offset.toFixed(1)} | Hidden: ${hiddenHeight.toFixed(1)} <br>
+                        <strong>LIFT: ${liftAmount.toFixed(1)}</strong>
+                        `;
+                    }
                 };
 
                 onMounted(() => {
@@ -541,14 +568,13 @@
                                 mainInput.value.focus({ preventScroll: true });
                             }
 
-                            // IMPORTANT: Changed to 'auto' for instant scrolling
+                            // AUTO scroll
                             const el = document.getElementById(`cell-${r}-${c}`);
                             if (el) el.scrollIntoView({ block: 'center', behavior: 'auto' });
 
-                            // Multi-check position
                             updatePanelPosition();
-                            setTimeout(updatePanelPosition, 100);
-                            setTimeout(updatePanelPosition, 300);
+                            setTimeout(updatePanelPosition, 50);
+                            setTimeout(updatePanelPosition, 200);
                         }
                     });
                 };
@@ -614,6 +640,7 @@
                     const a = document.createElement('a'); a.href = url; a.download = `${memo.title}.csv`; a.click(); URL.revokeObjectURL(url);
                 };
 
+                // HANDLERS
                 const openSearch = () => {
                     ui.showMenu = false;
                     ui.showSearchBar = true;
