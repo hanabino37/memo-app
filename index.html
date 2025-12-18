@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom, interactive-widget=resizes-content">
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom">
     <title>Table Memo</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,7 +16,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 20: Native Interactive Widget Support */
+        /* Phase 21: JS-Driven Layout */
         html,
         body {
             margin: 0;
@@ -24,9 +24,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            /* Disable global scroll */
             overscroll-behavior: none;
-            /* Disable bounce */
             background-color: #f3f4f6;
             -webkit-tap-highlight-color: transparent;
         }
@@ -38,18 +36,16 @@
             height: 100%;
         }
 
-        /* Scroll Container (Main Content) */
         .scroll-container {
             flex: 1;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             width: 100%;
-            /* Extra padding to ensure last row can be scrolled above the panel */
-            padding-bottom: 50vh;
+            /* Extra space at bottom for scrolling */
+            padding-bottom: 60vh;
             position: relative;
         }
 
-        /* Floating Input Panel */
         .floating-panel {
             position: fixed;
             bottom: 0;
@@ -58,15 +54,16 @@
             background-color: white;
             z-index: 9999;
             border-top: 1px solid #e5e7eb;
+            /* Padding will be handled by JS dynamically */
             padding-bottom: env(safe-area-inset-bottom);
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            /* Important: Fast transition for keyboard sync */
+            transition: bottom 0.1s ease-out;
         }
 
-        /* Mobile Table Styling */
         .mobile-table-wrapper {
             width: 100%;
             overflow-x: hidden;
-            /* Force fit */
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -82,7 +79,6 @@
             display: none;
         }
 
-        /* Animation Utilities */
         .animate-fade-in-down {
             animation: fadeInDown 0.2s ease-out;
         }
@@ -470,10 +466,37 @@
                     return total;
                 });
 
-                // Phase 20: Native Support (No manual JS calc)
+                // Phase 21: REVISED JS Logic for Keyboard
                 onMounted(() => {
                     loadLibrary();
-                    // JSによる位置調整はすべて削除し、ブラウザの自動調整に任せます
+
+                    if (window.visualViewport) {
+                        const handleResize = () => {
+                            if (!inputPanel.value) return;
+
+                            const v = window.visualViewport;
+                            const h = window.innerHeight;
+
+                            // Calculate hidden area height at the bottom
+                            // offsetTop accounts for page scroll when viewport shrinks
+                            const hiddenHeight = h - (v.height + v.offsetTop);
+
+                            // Ensure it doesn't go negative
+                            const liftAmount = Math.max(0, hiddenHeight);
+
+                            inputPanel.value.style.bottom = `${liftAmount}px`;
+
+                            // Adjust padding
+                            if (liftAmount > 10) {
+                                inputPanel.value.style.paddingBottom = '0px';
+                            } else {
+                                inputPanel.value.style.paddingBottom = 'env(safe-area-inset-bottom)';
+                            }
+                        };
+
+                        window.visualViewport.addEventListener('resize', handleResize);
+                        window.visualViewport.addEventListener('scroll', handleResize);
+                    }
                 });
 
                 const loadLibrary = () => {
@@ -597,7 +620,7 @@
                     const a = document.createElement('a'); a.href = url; a.download = `${memo.title}.csv`; a.click(); URL.revokeObjectURL(url);
                 };
 
-                // MISSING HANDLERS START
+                // HANDLERS
                 const openSearch = () => {
                     ui.showMenu = false;
                     ui.showSearchBar = true;
@@ -615,12 +638,10 @@
                     ui.showMenu = false;
                     ui.showItemStatsModal = true;
                 };
-                // MISSING HANDLERS END
 
                 return {
                     library, viewState, activeMemoId, ui, tempColCount, generatedImage, mainInput, searchInput, colors, activeMemo, memoList, canAddColumn, possibleNewColumns, statsData, totalCount, selectedColSum, inputPanel,
                     openInitModal, createMemo, openMemo, confirmDelete, formatDate, saveAndClose, getCellColorClass, isDimmed, isSelected, selectCell, commitAndNext, closePanel, editHeader, editTitle, toggleMenu, addColumn, saveAsImage, shareCSV,
-                    // ADDED TO RETURN
                     openSearch, closeSearch, openStats, openItemStats
                 };
             }
