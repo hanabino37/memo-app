@@ -16,7 +16,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 21: JS-Driven Layout */
+        /* Phase 22 Styles */
         html,
         body {
             margin: 0;
@@ -41,7 +41,7 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             width: 100%;
-            /* Extra space at bottom for scrolling */
+            /* Extra padding to ensure visibility */
             padding-bottom: 60vh;
             position: relative;
         }
@@ -54,10 +54,9 @@
             background-color: white;
             z-index: 9999;
             border-top: 1px solid #e5e7eb;
-            /* Padding will be handled by JS dynamically */
+            /* Padding is handled by JS */
             padding-bottom: env(safe-area-inset-bottom);
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            /* Important: Fast transition for keyboard sync */
             transition: bottom 0.1s ease-out;
         }
 
@@ -382,8 +381,8 @@
                     <i class="fa-solid fa-arrow-right ml-1 text-xs"></i></button>
             </div>
             <div class="p-4 bg-gray-50">
-                <input ref="mainInput" type="text" maxlength="12" v-model="ui.editValue" @keyup.enter="commitAndNext"
-                    placeholder="入力..."
+                <input ref="mainInput" type="text" maxlength="12" v-model="ui.editValue"
+                    @keydown.enter.prevent="commitAndNext" placeholder="入力..."
                     class="w-full text-xl font-bold bg-white border border-gray-300 rounded-lg px-4 py-3 text-center focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all shadow-inner">
             </div>
         </div>
@@ -421,7 +420,7 @@
                 const generatedImage = ref(null);
                 const mainInput = ref(null);
                 const searchInput = ref(null);
-                const inputPanel = ref(null); // Ref for Visual Viewport
+                const inputPanel = ref(null);
 
                 const colors = [
                     { key: 'white', bgClass: 'bg-white', label: '白' },
@@ -466,36 +465,23 @@
                     return total;
                 });
 
-                // Phase 21: REVISED JS Logic for Keyboard
+                // Phase 22: GLOBAL Update Function
+                const updatePanelPosition = () => {
+                    if (!inputPanel.value || !window.visualViewport) return;
+                    const v = window.visualViewport;
+                    const h = window.innerHeight;
+                    const hiddenHeight = h - (v.height + v.offsetTop);
+                    const liftAmount = Math.max(0, hiddenHeight);
+
+                    inputPanel.value.style.bottom = `${liftAmount}px`;
+                    inputPanel.value.style.paddingBottom = liftAmount > 10 ? '0px' : 'env(safe-area-inset-bottom)';
+                };
+
                 onMounted(() => {
                     loadLibrary();
-
                     if (window.visualViewport) {
-                        const handleResize = () => {
-                            if (!inputPanel.value) return;
-
-                            const v = window.visualViewport;
-                            const h = window.innerHeight;
-
-                            // Calculate hidden area height at the bottom
-                            // offsetTop accounts for page scroll when viewport shrinks
-                            const hiddenHeight = h - (v.height + v.offsetTop);
-
-                            // Ensure it doesn't go negative
-                            const liftAmount = Math.max(0, hiddenHeight);
-
-                            inputPanel.value.style.bottom = `${liftAmount}px`;
-
-                            // Adjust padding
-                            if (liftAmount > 10) {
-                                inputPanel.value.style.paddingBottom = '0px';
-                            } else {
-                                inputPanel.value.style.paddingBottom = 'env(safe-area-inset-bottom)';
-                            }
-                        };
-
-                        window.visualViewport.addEventListener('resize', handleResize);
-                        window.visualViewport.addEventListener('scroll', handleResize);
+                        window.visualViewport.addEventListener('resize', updatePanelPosition);
+                        window.visualViewport.addEventListener('scroll', updatePanelPosition);
                     }
                 });
 
@@ -552,9 +538,17 @@
 
                     nextTick(() => {
                         if (mainInput.value) {
-                            mainInput.value.focus({ preventScroll: true });
+                            // Only focus if not already focused (prevents keyboard flickering)
+                            if (document.activeElement !== mainInput.value) {
+                                mainInput.value.focus({ preventScroll: true });
+                            }
+
+                            // Scroll cell into view
                             const el = document.getElementById(`cell-${r}-${c}`);
                             if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+                            // FORCE UPDATE POSITION IMMEDIATELY
+                            updatePanelPosition();
                         }
                     });
                 };
@@ -620,7 +614,6 @@
                     const a = document.createElement('a'); a.href = url; a.download = `${memo.title}.csv`; a.click(); URL.revokeObjectURL(url);
                 };
 
-                // HANDLERS
                 const openSearch = () => {
                     ui.showMenu = false;
                     ui.showSearchBar = true;
