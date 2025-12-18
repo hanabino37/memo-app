@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, safe-area-inset-bottom">
-    <title>Table Memo (Phase 25)</title>
+    <title>Table Memo</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 25: Top-based Positioning */
+        /* Phase 26: Smart Scroll & Top-based Positioning */
         html,
         body {
             margin: 0;
@@ -38,19 +38,19 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             width: 100%;
+            /* Bottom padding ensures we can scroll to the very end */
             padding-bottom: 60vh;
             position: relative;
         }
 
         .floating-panel {
             position: fixed;
-            /* Initially hide off-screen or allow JS to set */
+            /* Phase 25 logic: controlled via top/left */
             left: 0;
             width: 100%;
             background-color: white;
             z-index: 9999;
             border-top: 1px solid #e5e7eb;
-            /* Padding handled by JS */
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
         }
 
@@ -88,27 +88,25 @@
             }
         }
 
-        /* DEBUG OVERLAY (Optional: Keep for verification) */
-        #debug-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: rgba(255, 0, 0, 0.8);
-            color: white;
-            font-size: 10px;
-            padding: 4px;
-            z-index: 10000;
-            pointer-events: none;
-            font-family: monospace;
-            max-width: 100%;
-            text-align: left;
+        .animate-bounce-in {
+            animation: bounceIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes bounceIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
     </style>
 </head>
 
 <body>
-
-    <div id="debug-overlay">Initializing Phase 25...</div>
 
     <div id="app" v-cloak>
 
@@ -417,7 +415,6 @@
                 const mainInput = ref(null);
                 const searchInput = ref(null);
                 const inputPanel = ref(null);
-                const debugInfo = document.getElementById('debug-overlay'); // Debug element
 
                 const colors = [
                     { key: 'white', bgClass: 'bg-white', label: '白' },
@@ -462,37 +459,23 @@
                     return total;
                 });
 
-                // Phase 25: NEW POSITIONING LOGIC (Top-based)
+                // Phase 26: Top-based Positioning + Smart Scrolling
                 const updatePanelPosition = () => {
                     if (!inputPanel.value || !window.visualViewport) return;
 
                     const v = window.visualViewport;
                     const panelHeight = inputPanel.value.offsetHeight;
 
-                    // Calculate position relative to document top
-                    // v.offsetTop = Distance of visual viewport top from layout top
-                    // v.height = Height of visual viewport
-                    // We place the panel at: Top of Viewport + Height of Viewport - Panel Height
+                    // Top Position Logic
                     const newTop = v.offsetTop + v.height - panelHeight;
-
-                    // Apply TOP, reset BOTTOM
                     inputPanel.value.style.top = `${newTop}px`;
                     inputPanel.value.style.bottom = 'auto';
 
-                    // Adjust padding: If keyboard is likely open (v.height is small), remove safe-area padding
-                    // Heuristic: If v.height is significantly smaller than window.innerHeight
+                    // Padding Logic
                     if (v.height < window.innerHeight - 100) {
                         inputPanel.value.style.paddingBottom = '0px';
                     } else {
                         inputPanel.value.style.paddingBottom = 'env(safe-area-inset-bottom)';
-                    }
-
-                    // DEBUG LOG
-                    if (debugInfo) {
-                        debugInfo.innerHTML = `
-                        VV.Top: ${v.offsetTop.toFixed(0)} | VV.H: ${v.height.toFixed(0)} <br>
-                        PanelH: ${panelHeight} | <strong>TOP: ${newTop.toFixed(0)}</strong>
-                        `;
                     }
                 };
 
@@ -557,17 +540,43 @@
 
                     nextTick(() => {
                         if (mainInput.value) {
+                            // Maintain Focus
                             if (document.activeElement !== mainInput.value) {
                                 mainInput.value.focus({ preventScroll: true });
                             }
 
-                            // AUTO scroll
+                            // SMART SCROLL LOGIC
+                            // Don't just scrollIntoView. Check if it's visible first.
                             const el = document.getElementById(`cell-${r}-${c}`);
-                            if (el) el.scrollIntoView({ block: 'center', behavior: 'auto' });
+                            const container = document.querySelector('.scroll-container');
+                            const header = document.querySelector('header');
+                            const panel = inputPanel.value;
 
+                            if (el && container && header && panel) {
+                                const cellRect = el.getBoundingClientRect();
+                                const headerRect = header.getBoundingClientRect();
+                                const panelRect = panel.getBoundingClientRect();
+
+                                const safeTop = headerRect.bottom;
+                                const safeBottom = panelRect.top;
+                                const margin = 10;
+
+                                // 1. Hidden Above?
+                                if (cellRect.top < safeTop) {
+                                    const diff = safeTop - cellRect.top + margin;
+                                    container.scrollTop -= diff;
+                                }
+                                // 2. Hidden Below?
+                                else if (cellRect.bottom > safeBottom) {
+                                    const diff = cellRect.bottom - safeBottom + margin;
+                                    container.scrollTop += diff;
+                                }
+                                // 3. Else: Visible. Do nothing.
+                            }
+
+                            // Re-check panel position just in case
                             updatePanelPosition();
                             setTimeout(updatePanelPosition, 50);
-                            setTimeout(updatePanelPosition, 200);
                         }
                     });
                 };
