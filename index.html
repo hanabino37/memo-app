@@ -8,14 +8,18 @@
     <title>Table Memo</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
-        /* Phase 26: Smart Scroll & Top-based Positioning */
+        /* Phase 27: Auto-Resume & Smart Scroll & Top-based Positioning */
         html,
         body {
             margin: 0;
@@ -40,14 +44,12 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             width: 100%;
-            /* Bottom padding ensures we can scroll to the very end */
             padding-bottom: 60vh;
             position: relative;
         }
 
         .floating-panel {
             position: fixed;
-            /* Phase 25 logic: controlled via top/left */
             left: 0;
             width: 100%;
             background-color: white;
@@ -461,19 +463,17 @@
                     return total;
                 });
 
-                // Phase 26: Top-based Positioning + Smart Scrolling
+                // Position & Scroll Logic
                 const updatePanelPosition = () => {
                     if (!inputPanel.value || !window.visualViewport) return;
 
                     const v = window.visualViewport;
                     const panelHeight = inputPanel.value.offsetHeight;
 
-                    // Top Position Logic
                     const newTop = v.offsetTop + v.height - panelHeight;
                     inputPanel.value.style.top = `${newTop}px`;
                     inputPanel.value.style.bottom = 'auto';
 
-                    // Padding Logic
                     if (v.height < window.innerHeight - 100) {
                         inputPanel.value.style.paddingBottom = '0px';
                     } else {
@@ -483,6 +483,15 @@
 
                 onMounted(() => {
                     loadLibrary();
+                    // Phase 27: Check for saved state (Auto-Resume)
+                    const lastView = localStorage.getItem('tm_last_view');
+                    if (lastView) {
+                        const target = library.value.find(m => m.id === lastView);
+                        if (target) {
+                            openMemo(target.id);
+                        }
+                    }
+
                     if (window.visualViewport) {
                         window.visualViewport.addEventListener('resize', updatePanelPosition);
                         window.visualViewport.addEventListener('scroll', updatePanelPosition);
@@ -519,12 +528,21 @@
                     activeMemoId.value = id;
                     viewState.value = 'editor';
                     ui.showMenu = false; ui.showSearchBar = false; ui.searchQuery = ''; ui.selectedCell = null;
+                    // Phase 27: Save current view
+                    localStorage.setItem('tm_last_view', id);
                 };
 
                 const confirmDelete = (id) => { if (confirm('このメモを削除しますか？')) { const idx = library.value.findIndex(m => m.id === id); if (idx !== -1) { library.value.splice(idx, 1); saveLibrary(); } } };
                 const formatDate = (ts) => new Date(ts).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-                const saveAndClose = () => { autoSave(); activeMemoId.value = null; viewState.value = 'home'; };
+                const saveAndClose = () => {
+                    autoSave();
+                    activeMemoId.value = null;
+                    viewState.value = 'home';
+                    // Phase 27: Clear saved view (back to menu)
+                    localStorage.removeItem('tm_last_view');
+                };
+
                 const getCellColorClass = (key) => colors.find(c => c.key === key)?.bgClass || 'bg-white';
                 const isDimmed = (cell) => { if (!ui.searchQuery) return false; return !cell.text.includes(ui.searchQuery); };
                 const isSelected = (r, c) => ui.selectedCell && ui.selectedCell.r === r && ui.selectedCell.c === c;
@@ -542,13 +560,10 @@
 
                     nextTick(() => {
                         if (mainInput.value) {
-                            // Maintain Focus
                             if (document.activeElement !== mainInput.value) {
                                 mainInput.value.focus({ preventScroll: true });
                             }
 
-                            // SMART SCROLL LOGIC
-                            // Don't just scrollIntoView. Check if it's visible first.
                             const el = document.getElementById(`cell-${r}-${c}`);
                             const container = document.querySelector('.scroll-container');
                             const header = document.querySelector('header');
@@ -563,20 +578,16 @@
                                 const safeBottom = panelRect.top;
                                 const margin = 10;
 
-                                // 1. Hidden Above?
                                 if (cellRect.top < safeTop) {
                                     const diff = safeTop - cellRect.top + margin;
                                     container.scrollTop -= diff;
                                 }
-                                // 2. Hidden Below?
                                 else if (cellRect.bottom > safeBottom) {
                                     const diff = cellRect.bottom - safeBottom + margin;
                                     container.scrollTop += diff;
                                 }
-                                // 3. Else: Visible. Do nothing.
                             }
 
-                            // Re-check panel position just in case
                             updatePanelPosition();
                             setTimeout(updatePanelPosition, 50);
                         }
@@ -644,7 +655,6 @@
                     const a = document.createElement('a'); a.href = url; a.download = `${memo.title}.csv`; a.click(); URL.revokeObjectURL(url);
                 };
 
-                // HANDLERS
                 const openSearch = () => {
                     ui.showMenu = false;
                     ui.showSearchBar = true;
@@ -663,6 +673,15 @@
                     ui.showItemStatsModal = true;
                 };
 
+                // Service Worker Registration
+                if ('serviceWorker' in navigator) {
+                    window.addEventListener('load', () => {
+                        navigator.serviceWorker.register('./service-worker.js')
+                            .then(reg => console.log('SW registered!', reg))
+                            .catch(err => console.log('SW failed', err));
+                    });
+                }
+
                 return {
                     library, viewState, activeMemoId, ui, tempColCount, generatedImage, mainInput, searchInput, colors, activeMemo, memoList, canAddColumn, possibleNewColumns, statsData, totalCount, selectedColSum, inputPanel,
                     openInitModal, createMemo, openMemo, confirmDelete, formatDate, saveAndClose, getCellColorClass, isDimmed, isSelected, selectCell, commitAndNext, closePanel, editHeader, editTitle, toggleMenu, addColumn, saveAsImage, shareCSV,
@@ -670,14 +689,6 @@
                 };
             }
         }).mount('#app');
-        // Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(reg => console.log('SW registered!', reg))
-                    .catch(err => console.log('SW failed', err));
-            });
-        }
     </script>
 </body>
 
