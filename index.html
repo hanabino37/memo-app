@@ -1002,7 +1002,9 @@
             const el = document.getElementById("capture-area");
             if (!el) return;
             const originalOverflow = el.style.overflow;
+            const originalPaddingBottom = el.style.paddingBottom;
             el.style.overflow = "visible";
+            el.style.paddingBottom = "0px";
             try {
               const canvas = await html2canvas(el, {
                 scale: 2,
@@ -1017,6 +1019,7 @@
               alert("画像生成に失敗しました");
             } finally {
               el.style.overflow = originalOverflow;
+              el.style.paddingBottom = originalPaddingBottom;
             }
           };
 
