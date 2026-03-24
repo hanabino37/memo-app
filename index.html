@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
@@ -596,13 +596,15 @@
       const { createApp, reactive, computed, ref, nextTick, onMounted, toRaw } =
         Vue;
 
-      const uuidv4 = () =>
-        "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) =>
-          ((Math.random() * 16) | 0,
-          c == "x"
-            ? (Math.random() * 16) | 0
-            : (((Math.random() * 16) | 0) & 0x3) | 0x8).toString(16)
-        );
+      const uuidv4 = () => {
+        if (typeof crypto !== "undefined" && crypto.randomUUID) {
+          return crypto.randomUUID();
+        }
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+        });
+      };
 
       const longPressDirective = {
         beforeMount(el, binding) {
@@ -663,14 +665,15 @@
           ];
 
           const activeMemo = computed(
-            () => library.value.find((m) => m.id === activeMemoId.value) || null
+            () =>
+              library.value.find((m) => m.id === activeMemoId.value) || null,
           );
           const memoList = computed(() =>
-            [...library.value].sort((a, b) => b.updatedAt - a.updatedAt)
+            [...library.value].sort((a, b) => b.updatedAt - a.updatedAt),
           );
           const maxCols = 6;
           const canAddColumn = computed(
-            () => activeMemo.value && activeMemo.value.colCount < maxCols
+            () => activeMemo.value && activeMemo.value.colCount < maxCols,
           );
           const possibleNewColumns = computed(() => {
             if (!activeMemo.value || !activeMemo.value.colCount) return [];
@@ -692,7 +695,7 @@
             activeMemo.value.data.forEach((row) =>
               row.forEach((cell) => {
                 if (counts[cell.color] !== undefined) counts[cell.color]++;
-              })
+              }),
             );
             return colors.map((c) => ({
               key: c.key,
@@ -703,7 +706,7 @@
           });
 
           const totalCount = computed(() =>
-            statsData.value.reduce((sum, item) => sum + item.count, 0)
+            statsData.value.reduce((sum, item) => sum + item.count, 0),
           );
 
           const selectedColSum = computed(() => {
@@ -733,10 +736,11 @@
           // Phase 28: Search Hit Count
           const searchHitCount = computed(() => {
             if (!ui.searchQuery || !activeMemo.value) return 0;
+            const q = ui.searchQuery.toLowerCase();
             let count = 0;
             activeMemo.value.data.forEach((row) => {
               row.forEach((cell) => {
-                if (cell.text.includes(ui.searchQuery)) count++;
+                if (cell.text.toLowerCase().includes(q)) count++;
               });
             });
             return count;
@@ -774,11 +778,11 @@
             if (window.visualViewport) {
               window.visualViewport.addEventListener(
                 "resize",
-                updatePanelPosition
+                updatePanelPosition,
               );
               window.visualViewport.addEventListener(
                 "scroll",
-                updatePanelPosition
+                updatePanelPosition,
               );
             }
           });
@@ -796,15 +800,22 @@
           };
 
           const saveLibrary = () => {
-            localStorage.setItem(
-              "tm_library",
-              JSON.stringify(toRaw(library.value))
-            );
+            try {
+              localStorage.setItem(
+                "tm_library",
+                JSON.stringify(toRaw(library.value)),
+              );
+            } catch (e) {
+              console.error(e);
+              alert(
+                "保存データ容量がいっぱいです。不要なメモを削除してください。",
+              );
+            }
           };
           const autoSave = () => {
             if (activeMemoId.value) {
               const memo = library.value.find(
-                (m) => m.id === activeMemoId.value
+                (m) => m.id === activeMemoId.value,
               );
               if (memo) memo.updatedAt = Date.now();
               saveLibrary();
@@ -841,6 +852,7 @@
             ui.showSearchBar = false;
             ui.searchQuery = "";
             ui.selectedCell = null;
+            ui.showInputPanel = false;
             localStorage.setItem("tm_last_view", id);
           };
 
@@ -872,7 +884,7 @@
             colors.find((c) => c.key === key)?.bgClass || "bg-white";
           const isDimmed = (cell) => {
             if (!ui.searchQuery) return false;
-            return !cell.text.includes(ui.searchQuery);
+            return !cell.text.toLowerCase().includes(ui.searchQuery.toLowerCase());
           };
           const isSelected = (r, c) =>
             ui.selectedCell &&
@@ -951,9 +963,8 @@
                   Array.from({ length: memo.colCount }, () => ({
                     text: "",
                     color: "white",
-                  }))
+                  })),
                 );
-                autoSave();
                 selectCell(r + 1, 0);
               } else {
                 selectCell(r + 1, 0);
@@ -976,7 +987,7 @@
           };
           const editTitle = () => {
             const newName = prompt("タイトルを編集", activeMemo.value.title);
-            if (newName) {
+            if (newName !== null) {
               activeMemo.value.title = newName;
               autoSave();
             }
@@ -1026,16 +1037,18 @@
           const shareCSV = async () => {
             ui.showMenu = false;
             const memo = activeMemo.value;
-            const headerRow = memo.headers.join(",");
+            const headerRow = memo.headers
+              .map((h) => `"${h.replace(/"/g, '""')}"`)
+              .join(",");
             const bodyRows = memo.data
               .map((row) =>
-                row.map((c) => `"${c.text.replace(/"/g, '""')}"`).join(",")
+                row.map((c) => `"${c.text.replace(/"/g, '""')}"`).join(","),
               )
               .join("\n");
             const csvContent = `${headerRow}\n${bodyRows}`;
             const blob = new Blob(
               [new Uint8Array([0xef, 0xbb, 0xbf]), csvContent],
-              { type: "text/csv" }
+              { type: "text/csv" },
             );
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
